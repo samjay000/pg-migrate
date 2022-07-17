@@ -12,15 +12,16 @@ mod tests {
     use pg_sync;
 
     fn before_all() {
-        pg_sync::setup_logger().expect("Setting up logger failed with panic!.");
+        pg_sync::setup_logger(log::LevelFilter::Debug).expect("Setting up logger failed with panic!.");
     }
 
     #[test]
     fn test_1_new_table() {
         debug!("test_1_new_table");
-        let mut settings = pg_sync::make_settings("pg-sync".to_string());
+        let mut settings = pg_sync::make_settings(&"pg-sync".to_string());
+
         settings.files.file = Some("schema.v1.sql".to_string());
-        let result = pg_sync::apply_file(&settings);
+        let result = pg_sync::apply_file(&settings, pg_sync::db_connection::make_connection(&settings.postgresql));
         info!("{:?}",result);
         let mut plan = pg_sync::plan::Plan::new();
         plan.table_names_all_from_file.push("table1".to_string());

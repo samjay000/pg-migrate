@@ -20,3 +20,5 @@ _alter add columns_
 
 migration id n+1 run `pg-sync undo n+1` to undo changes
 
+**Release**
+adding license to all files crates.io cargo install docs to do list

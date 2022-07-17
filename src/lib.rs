@@ -21,7 +21,7 @@ pub mod plan;
 
 pub fn start_processing() {
     let args: Args = arguments::Args::parse();
-    setup_logger(&args).expect("Setting up logger failed with panic!.");
+    setup_logger(args.log_level).expect("Setting up logger failed with panic!.");
     debug!("{:?}",args);
     print_heading();
 
@@ -118,7 +118,7 @@ pub fn print_heading() {
     bunt::println!("{$bold}PG Sync{/$} - Version {}", ver);
 }
 
-pub fn setup_logger(args: &Args) -> Result<(), fern::InitError> {
+pub fn setup_logger(log_level: log::LevelFilter) -> Result<(), fern::InitError> {
     fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -129,7 +129,7 @@ pub fn setup_logger(args: &Args) -> Result<(), fern::InitError> {
                 message
             ))
         })
-        .level(args.log_level)
+        .level(log_level)
         .chain(std::io::stdout())
         // .chain(fern::log_file("output.log")?)
         .apply()?;
