@@ -207,8 +207,7 @@ use itertools::Itertools;
 use log::{debug, info};
 use postgres::Client;
 use sqlparser::ast;
-use sqlparser::ast::{AlterColumnOperation, AlterTableOperation, ColumnDef, ColumnOptionDef, DataType, Expr, HiveDistributionStyle, Ident, ObjectName, ObjectType, Statement};
-use sqlparser::ast::Expr::{Cast, Identifier};
+use sqlparser::ast::{AlterTableOperation, ColumnDef, DataType, Ident, ObjectName, ObjectType, Statement};
 use sqlparser::dialect::PostgreSqlDialect;
 
 use crate::{file_loader, SQLParser};

@@ -204,7 +204,6 @@
 use std::str::FromStr;
 
 use clap::Parser;
-use config::ConfigError;
 use log::debug;
 use postgres::Client;
 use sqlparser::ast::Statement;
