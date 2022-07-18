@@ -21,7 +21,6 @@ _alter add columns_
 migration id n+1 run `pg-sync undo n+1` to undo changes
 
 **Release**
-_adding license to all files_
 _crates.io_
 _cargo install_
 _docs_

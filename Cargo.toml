@@ -2,6 +2,11 @@
 name = "pg_sync"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+license-file = "LICENSE"
+description = "PostgreSQL DML change management tool"
+repository = "https://github.com/sam-mmm/pg-sync"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
