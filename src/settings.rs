@@ -210,7 +210,7 @@ use serde::{Deserialize, Serialize};
 #[allow(unused_attributes)]
 pub struct Postgresql {
     pub host: String,
-    pub port: String,
+    pub port: Option<String>,
     pub dbname: String,
     pub user: String,
     pub password: String,

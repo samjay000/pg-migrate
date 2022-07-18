@@ -312,7 +312,7 @@ pub fn print_plan_summary(plan: &Plan) {
 }
 
 pub fn print_postgresql_connection_info(settings: &Settings) {
-    bunt::println!("{$italic}Conneting to {}@{}:{}/{} {/$}", settings.postgresql.user, settings.postgresql.host, settings.postgresql.port, settings.postgresql.dbname);
+    bunt::println!("{$italic}Conneting to {}@{}/{} {/$}", settings.postgresql.user, settings.postgresql.host, settings.postgresql.dbname);
 }
 
 pub fn print_heading() {
