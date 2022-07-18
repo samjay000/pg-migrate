@@ -292,7 +292,7 @@ pub fn apply_file(file: &str, schema: &String, client: &mut Client) -> Result<Pl
         match statement {
             Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, engine, default_charset, collation, on_commit } => {
                 if plan.table_names_new.contains(&name.to_string()) {
-                    &plan.table_statements_new.push(statement.clone());
+                    plan.table_statements_new.push(statement.clone());
                 }
             }
             _ => {}

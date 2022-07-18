@@ -206,6 +206,6 @@ use postgres::{Client, NoTls};
 use crate::settings::Postgresql;
 
 pub fn make_connection(config: &Postgresql) -> Client {
-    let client = Client::connect("host=localhost user=samjay dbname=postgres ", NoTls).unwrap();
+    let client = Client::connect(format!("host={} user={} dbname={}", config.host, config.user, config.dbname).as_str(), NoTls).unwrap();
     return client;
 }

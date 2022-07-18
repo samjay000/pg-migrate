@@ -247,7 +247,7 @@ pub fn make_settings(file_name: &String) -> Settings {
 
 pub fn apply_file_and_print_summary(args: &Args, settings: &settings::Settings) {
     print_postgresql_connection_info(&settings);
-    let mut client = db_connection::make_connection(&settings.postgresql);
+    let client = db_connection::make_connection(&settings.postgresql);
     let result = apply_file(settings, client);
     match result {
         Ok(plan) => {
@@ -302,7 +302,7 @@ pub fn print_plan_summary(plan: &Plan) {
     let mut table_names_changed: Vec<String> = vec![];
     for table_statement_change in &plan.table_statements_changes {
         match table_statement_change {
-            Statement::AlterTable { name, operation } => {
+            Statement::AlterTable { name, operation: _ } => {
                 if !table_names_changed.contains(&name.to_string()) { table_names_changed.push(name.to_string()); }
             }
             _ => {}
@@ -342,7 +342,7 @@ fn ask_do_you_want_to_apply_up(plan: &Plan, client: &mut Client) {
     bunt::println!("{$bold}Do want to apply above changes({/$}yes or no{$bold})? {/$}");
     let mut input = String::new();
     match std::io::stdin().read_line(&mut input) {
-        Ok(n) => {
+        Ok(_) => {
             match input.as_str().trim() {
                 "yes" => {
                     yes_apply_changes(plan, client);
