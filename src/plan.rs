@@ -212,7 +212,7 @@ pub enum Error {
     DuplicateTableName { table_names: String },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Plan {
     pub table_names_all_from_file: Vec<String>,
     pub table_names_all_from_db: Vec<String>,
@@ -263,3 +263,4 @@ impl Plan {
         }
     }
 }
+

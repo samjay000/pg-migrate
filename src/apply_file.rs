@@ -213,54 +213,68 @@ use sqlparser::dialect::PostgreSqlDialect;
 use crate::{file_loader, SQLParser};
 use crate::plan::{Error, Plan};
 
-pub fn apply_file(file: &str, schema: &String, client: &mut Client) -> Result<Plan, Error> {
+pub fn apply_file(files: Vec<String>, schema: &String, client: &mut Client) -> Result<Plan, Error> {
     let mut plan = Plan::new();
+    let mut all_statements: Vec<ast::Statement> = vec![];
 
-    let contents = file_loader::load(file);
+    debug!("files: {:?}",files);
 
     let dialect = PostgreSqlDialect {}; // or AnsiDialect, or your own dialect ...
-    let ast: Vec<ast::Statement> = SQLParser::parse_sql(&dialect, &contents).unwrap();
-    info!("AST: {:?}", ast);
+    for file in files {
+        let contents = file_loader::load(&file);
+        let ast: Vec<ast::Statement> = SQLParser::parse_sql(&dialect, &contents).unwrap();
+        info!("AST: {:?}", ast);
+        all_statements.extend(ast);
+    }
 
-    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 ", &[schema]).unwrap() {
-        let table_name: &str = row_table.get(0);
-        plan.table_names_all_from_db.push(table_name.to_string());
-    }
-    for statement in &ast {
-        match statement {
-            Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, engine, default_charset, collation, on_commit } => {
-                plan.table_names_all_from_file.push(name.to_string());
-            }
-            _ => {}
-        }
-    }
+
+    fetch_table_names_all_from_file(&mut plan, &all_statements);
+
     plan.table_names_dup_from_file = plan.table_names_all_from_file.clone().into_iter().duplicates().collect::<Vec<String>>();
     if !plan.table_names_dup_from_file.is_empty() { return Err(Error::DuplicateTableName { table_names: plan.table_names_dup_from_file.get(0).unwrap().to_string() }); }
     plan.table_names_unique_from_file = plan.table_names_all_from_file.clone().into_iter().unique().collect::<Vec<String>>();
 
+    fetch_table_names_all_from_db(&schema, client, &mut plan);
+    fetch_table_names_and_table_names_existing_or_drop(&schema, client, &mut plan);
+    filter_table_names_new(&mut plan);
+    filter_table_names_existing_for_table_names_unchanged_or_table_statements_changes(&schema, client, &mut plan, &all_statements);
+    fill_table_statements_dropped(&mut plan);
+    fill_table_statements_new(&mut plan, &all_statements);
+    make_sql_statements(&mut plan);
+    make_reverse_plan(&mut plan, &schema, client);
+    return Ok(plan);
+}
 
-    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 ", &[schema]).unwrap() {
-        let table_name: &str = row_table.get(0);
-        for name in &plan.table_names_unique_from_file {
-            if name == table_name {
-                plan.table_names_existing.push(table_name.to_string());
+fn fill_table_statements_new(plan: &mut Plan, ast: &Vec<Statement>) {
+    for statement in ast {
+        match statement {
+            Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, engine, default_charset, collation, on_commit } => {
+                if plan.table_names_new.contains(&name.to_string()) {
+                    plan.table_statements_new.push(statement.clone());
+                }
             }
-        }
-        if !&plan.table_names_existing.contains(&table_name.to_string()) {
-            plan.table_names_dropped.push(table_name.to_string())
+            _ => {}
         }
     }
+}
 
-    for name in &plan.table_names_unique_from_file {
-        if !&plan.table_names_existing.contains(&name.to_string()) && !&plan.table_names_dropped.contains(&name.to_string()) {
-            plan.table_names_new.push(name.to_string());
-        }
+fn fill_table_statements_dropped(plan: &mut Plan) {
+    for table_name in &plan.table_names_dropped {
+        plan.table_statements_dropped.push(Statement::Drop {
+            object_type: ObjectType::Table,
+            if_exists: false,
+            names: vec![ObjectName(vec![Ident { value: table_name.to_string(), quote_style: None }])],
+            cascade: false,
+            purge: false,
+        })
     }
+}
 
+fn filter_table_names_existing_for_table_names_unchanged_or_table_statements_changes(schema: &&String, client: &mut Client, plan: &mut Plan, ast: &Vec<Statement>) {
     for table_name in &plan.table_names_existing {
         let column_defs_from_db = make_column_def_by_table_name(&schema, client, &table_name);
 
-        for statement in &ast {
+        for statement in ast {
             match statement {
                 Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, engine, default_charset, collation, on_commit } => {
                     if name.to_string() == table_name.to_string() {
@@ -277,30 +291,46 @@ pub fn apply_file(file: &str, schema: &String, client: &mut Client) -> Result<Pl
             }
         }
     }
+}
 
-    for table_name in &plan.table_names_dropped {
-        plan.table_statements_dropped.push(Statement::Drop {
-            object_type: ObjectType::Table,
-            if_exists: false,
-            names: vec![ObjectName(vec![Ident { value: table_name.to_string(), quote_style: None }])],
-            cascade: false,
-            purge: false,
-        })
+fn filter_table_names_new(plan: &mut Plan) {
+    for name in &plan.table_names_unique_from_file {
+        if !&plan.table_names_existing.contains(&name.to_string()) && !&plan.table_names_dropped.contains(&name.to_string()) {
+            plan.table_names_new.push(name.to_string());
+        }
     }
+}
 
-    for statement in &ast {
+fn fetch_table_names_and_table_names_existing_or_drop(schema: &&String, client: &mut Client, plan: &mut Plan) {
+    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 ", &[schema]).unwrap() {
+        let table_name: &str = row_table.get(0);
+        for name in &plan.table_names_unique_from_file {
+            if name == table_name {
+                plan.table_names_existing.push(table_name.to_string());
+            }
+        }
+        if !&plan.table_names_existing.contains(&table_name.to_string()) {
+            plan.table_names_dropped.push(table_name.to_string())
+        }
+    }
+}
+
+fn fetch_table_names_all_from_file(plan: &mut Plan, ast: &Vec<Statement>) {
+    for statement in ast {
         match statement {
             Statement::CreateTable { or_replace, temporary, external, global, if_not_exists, name, columns, constraints, hive_distribution, hive_formats, table_properties, with_options, file_format, location, query, without_rowid, like, engine, default_charset, collation, on_commit } => {
-                if plan.table_names_new.contains(&name.to_string()) {
-                    plan.table_statements_new.push(statement.clone());
-                }
+                plan.table_names_all_from_file.push(name.to_string());
             }
             _ => {}
         }
     }
-    make_sql_statements(&mut plan);
-    make_reverse_plan(&mut plan, &schema, client);
-    return Ok(plan);
+}
+
+fn fetch_table_names_all_from_db(schema: &&String, client: &mut Client, plan: &mut Plan) {
+    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 ", &[schema]).unwrap() {
+        let table_name: &str = row_table.get(0);
+        plan.table_names_all_from_db.push(table_name.to_string());
+    }
 }
 
 fn make_column_def_by_table_name(schema: &&String, client: &mut Client, table_name: &String) -> Vec<ColumnDef> {
@@ -430,7 +460,7 @@ fn make_sql_statements(plan: &mut Plan) {
 fn make_reverse_plan(plan: &mut Plan, schema: &&String, client: &mut Client) {
     for table_statement_dropped in &plan.table_statements_dropped {
         match table_statement_dropped {
-            Statement::Drop { object_type, if_exists, names, cascade, purge } => {
+            Statement::Drop { object_type: _, if_exists: _, names, cascade: _, purge: _ } => {
                 let table_name = names[0].to_string();
                 debug!("{}",table_name);
                 // let column_defs = make_column_def_by_table_name(schema,     &mut client, &&table_name);

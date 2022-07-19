@@ -223,8 +223,6 @@ mod tests {
     fn test_1_new_table() {
         debug!("test_1_new_table");
         let mut settings = pg_sync::make_settings(&"pg-sync".to_string());
-
-        settings.files.file = Some("schema.v1.sql".to_string());
         let result = pg_sync::apply_file(&settings, pg_sync::db_connection::make_connection(&settings.postgresql));
         info!("{:?}",result);
         let mut plan = pg_sync::plan::Plan::new();
@@ -247,7 +245,7 @@ mod tests {
     //     pg_sync::setup_logger().expect("Setting up logger failed with panic!.");
     //     debug!("test_2_new_table");
     //     let mut settings = pg_sync::make_settings("pg-sync".to_string());
-    //     settings.files.file = Some("schema.v1.sql".to_string());
+    //     settings.files.file = Some("schema.sql".to_string());
     //     let  result = pg_sync::apply_file(&settings);
     //     debug!("{:?}",result);
     //     let mut plan = pg_sync::plan::Plan::new();

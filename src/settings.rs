@@ -202,6 +202,8 @@
  *    limitations under the License.
  */
 
+use std::path::Path;
+
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
 
@@ -231,13 +233,13 @@ pub struct Files {
 #[allow(unused_attributes)]
 pub struct Settings {
     pub postgresql: Postgresql,
-    pub files: Files,
+    pub files: Option<Files>,
 }
 
 impl Settings {
     pub fn new_from_file(file: String) -> Result<Self, ConfigError> {
         let s = Config::builder()
-            .set_default("files.file", "schema.v1.sql")?
+            // .set_default("files.file", "schema.sql")?
             // Start off by merging in the "default" configuration file
             .add_source(File::with_name(&file))
             // Add in the current environment file
@@ -264,7 +266,7 @@ impl Settings {
     }
     pub fn new() -> Result<Self, ConfigError> {
         let s = Config::builder()
-            .set_default("files.file", "schema.v1.sql")?
+            // .set_default("files.file", "schema.sql")?
             // Start off by merging in the "default" configuration file
             .add_source(File::with_name("pg-sync"))
             // Add in the current environment file
@@ -288,5 +290,61 @@ impl Settings {
 
         // You can deserialize (and thus freeze) the entire configuration as
         s.try_deserialize()
+    }
+
+    pub fn validate_files_folder(mut self) -> Vec<String> {
+        let mut file_list: Vec<String> = vec![];
+        let mut file_not_found = true;
+        let mut file_not_found_in_files = true;
+        let mut folder_not_found = true;
+        if let Some(files) = self.files {
+            if let Some(file_name) = files.file {
+                // let file_name_str = format!("{}", file_name);
+                let path = Path::new(&file_name);
+                if !path.exists() {
+                    file_not_found = true;
+                    bunt::println!("{$bold+red}File {} does not exist.{/$}", file_name);
+                    std::process::exit(0)
+                } else if !path.is_file() {
+                    file_not_found = true;
+                    bunt::println!("{$bold+red}Path {} is not a file.{/$}", file_name);
+                    std::process::exit(0)
+                } else {
+                    file_list.push(file_name);
+                }
+            }
+            if file_not_found {
+                if let Some(file_names) = files.files {
+                    for file_name in file_names {
+                        let path = Path::new(&file_name);
+                        if !path.exists() {
+                            file_not_found_in_files = true;
+                            bunt::println!("{$bold+red}File {} does not exist.{/$}", file_name);
+                            std::process::exit(0)
+                        } else if !path.is_file() {
+                            file_not_found_in_files = true;
+                            bunt::println!("{$bold+red}Path {} is not a file.{/$}", file_name);
+                            std::process::exit(0)
+                        } else {
+                            file_list.push(file_name);
+                        }
+                    }
+                }
+            }
+            if file_not_found && file_not_found_in_files {
+                // std::todo!();
+                //     TODO
+                folder_not_found = false;
+            }
+        }
+        if file_not_found && file_not_found_in_files && folder_not_found {
+            self.files = Some(Files {
+                file: Some("schema.sql".to_string()),
+                files: None,
+                folder: None,
+            });
+            file_list.push("schema.sql".to_string());
+        }
+        return file_list;
     }
 }

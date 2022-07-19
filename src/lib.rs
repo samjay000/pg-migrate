@@ -228,6 +228,7 @@ pub fn start_processing() {
     print_heading();
 
     let settings = make_settings(&args.config);
+    debug!("{:?}",settings);
     apply_file_and_print_summary(&args, &settings);
 }
 
@@ -235,6 +236,7 @@ pub fn make_settings(file_name: &String) -> Settings {
     let settings = settings::Settings::new_from_file(file_name.to_string());
     match settings {
         Ok(settings) => {
+            settings.clone().validate_files_folder();
             return settings;
         }
         Err(error) => {
@@ -257,6 +259,9 @@ pub fn apply_file_and_print_summary(args: &Args, settings: &settings::Settings) 
             print_plan_summary(&plan);
             if args.apply {
                 yes_apply_changes(&plan, &mut db_connection::make_connection(&settings.postgresql));
+            }
+            if args.dry_run {
+                no_do_not_apply_changes();
             } else {
                 ask_do_you_want_to_apply_up(&plan, &mut db_connection::make_connection(&settings.postgresql));
             }
@@ -268,7 +273,7 @@ pub fn apply_file_and_print_summary(args: &Args, settings: &settings::Settings) 
 }
 
 pub fn apply_file(settings: &settings::Settings, mut client: Client) -> Result<Plan, Error> {
-    let result = apply_file::apply_file(&settings.files.file.as_ref().unwrap(), &settings.postgresql.schema.as_ref().unwrap_or(&"public".to_string()).to_string(), &mut client);
+    let result = apply_file::apply_file(settings.clone().validate_files_folder(), &settings.postgresql.schema.as_ref().unwrap_or(&"public".to_string()).to_string(), &mut client);
     return result;
 }
 

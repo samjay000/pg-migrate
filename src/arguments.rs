@@ -218,5 +218,8 @@ pub struct Args {
     ///Apply changes without confirmation
     #[clap(short, long)]
     pub apply: bool,
+    ///Process changes without applying
+    #[clap(short, long)]
+    pub dry_run: bool,
 
 }
