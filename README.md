@@ -4,8 +4,8 @@ PG-Sync is a PostgreSQL schema chnage management tool.
 
 #### Why?
 
-Other existing DB schema management tools deals change sets or change set files, you dont have currunt structure of your
-schema in sigle place(file). Either you go through change set or use database client tool.
+Other existing DB schema management tools deals with change sets or change set files, you dont have currunt structure of
+your schema in sigle place(file). Either you go through change sets or use database client tool(PG Admin).
 
 #### How?
 
