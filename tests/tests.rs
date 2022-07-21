@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn test_1_new_table() {
         debug!("test_1_new_table");
-        let mut settings = pg_sync::make_settings(&"pg-sync".to_string());
+        let settings = pg_sync::make_settings(&"pg-sync".to_string());
         let result = pg_sync::apply_file(&settings, pg_sync::db_connection::make_connection(&settings.postgresql));
         info!("{:?}",result);
         let mut plan = pg_sync::plan::Plan::new();
