@@ -7,9 +7,9 @@ license = "Apache-2.0"
 description = "PostgreSQL DML change management tool"
 repository = "https://github.com/sam-mmm/pg-sync"
 readme = "README.md"
-[[bin]]
-name = "pgsync"
-path = "src/main.rs"
+#[[bin]]
+#name = "pgsync"
+#path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
