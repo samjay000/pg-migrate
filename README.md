@@ -13,10 +13,14 @@ With PG-Sync you will have current database schema structure in file and PG_Sync
 your schema file and apply diff on your database.
 *current database schema structure = Schema if you do a fresh installation of current version of you application.*
 
+------------
+
 #### Installation
 
 `cargo install pg_sync
 `
+
+------------
 
 #### Example 1
 
@@ -52,3 +56,19 @@ Will produce
 ALTER TABLE table1
     ADD COLUMN column12 text;
 ```
+
+------------
+
+#### TODO
+
+- Create new tables
+- Drop old tables
+- Alter add column
+- Alter drop columns
+- Alter change column name
+- Alter change column data type
+- Alter change primary key
+- Alter change primary key with identity type
+
+
+
