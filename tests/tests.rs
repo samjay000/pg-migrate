@@ -214,17 +214,25 @@ mod tests {
     use sqlparser::ast::Statement::CreateTable;
 
     use pg_sync;
+    use pg_sync::plan::{Error, Plan};
+    use pg_sync::settings::{Files, Settings};
 
     fn before_all() {
         pg_sync::setup_logger(log::LevelFilter::Debug).expect("Setting up logger failed with panic!.");
     }
 
-    #[test]
-    fn test_1_new_table() {
-        debug!("test_1_new_table");
-        let settings = pg_sync::make_settings(&"pg-sync".to_string());
+    fn extract_plan_from_schema_definition(file: &str) -> (Settings, Result<Plan, Error>) {
+        let mut settings = pg_sync::make_settings(&"pg-sync".to_string());
+        settings.files = Some(Files {
+            file: Some(file.to_string()),
+            files: None,
+            folder: None,
+        });
         let result = pg_sync::apply_file(&settings, pg_sync::db_connection::make_connection(&settings.postgresql));
-        info!("{:?}",result);
+        (settings, result)
+    }
+
+    fn correct_plan_for_schema_1() -> Plan {
         let mut plan = pg_sync::plan::Plan::new();
         plan.table_names_all_from_file.push("table1".to_string());
         plan.table_names_unique_from_file.push("table1".to_string());
@@ -234,27 +242,56 @@ mod tests {
         );
         plan.sql_statements_for_step_up.push("CREATE TABLE table1 (column11 TEXT)".to_string());
         plan.sql_statements_for_step_down.push("DROP TABLE table1".to_string());
+        plan
+    }
+
+    fn correct_plan_for_schema_2_2() -> Plan {
+        let mut plan = pg_sync::plan::Plan::new();
+        // Plan {table_statements_new: [, sql_statements_for_step_up: ["CREATE TABLE table22 (column221 TEXT)"], sql_statements_for_step_down: ["DROP TABLE table22"]
+        plan.table_names_all_from_file.push("table21".to_string());
+        plan.table_names_all_from_file.push("table22".to_string());
+        plan.table_names_all_from_db.push("table21".to_string());
+        plan.table_names_unique_from_file.push("table21".to_string());
+        plan.table_names_unique_from_file.push("table22".to_string());
+        plan.table_names_existing.push("table21".to_string());
+        plan.table_names_unchanged.push("table21".to_string());
+        plan.table_names_new.push("table22".to_string());
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table22".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column221".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.sql_statements_for_step_up.push("CREATE TABLE table22 (column221 TEXT)".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table22".to_string());
+        plan
+    }
+
+    #[test]
+    fn test_1_new_table() {
+        debug!("test_1_new_table");
+        let (settings, result) = extract_plan_from_schema_definition("data/schema.1.sql");
+        info!("{:?}",result);
         let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
-        plan.apply_plan_up(&mut client);
-        plan.apply_plan_down(&mut client);
+        result.as_ref().unwrap().apply_plan_up(&mut client);
+        result.as_ref().unwrap().apply_plan_down(&mut client);
+        let plan = correct_plan_for_schema_1();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result.unwrap()))
     }
 
-    // #[test]
-    // fn test_2_new_table() {
-    //     pg_sync::setup_logger().expect("Setting up logger failed with panic!.");
-    //     debug!("test_2_new_table");
-    //     let mut settings = pg_sync::make_settings("pg-sync".to_string());
-    //     settings.files.file = Some("schema.sql".to_string());
-    //     let  result = pg_sync::apply_file(&settings);
-    //     debug!("{:?}",result);
-    //     let mut plan = pg_sync::plan::Plan::new();
-    //     plan.table_names_all_from_file.push("table1".to_string());
-    //     plan.table_names_unique_from_file.push("table1".to_string());
-    //     plan.table_names_new.push("table1".to_string());
-    //     plan.table_statements_new.push(
-    //         CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table1".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column11".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
-    //     );
-    //     assert_eq!(format!("{:?}",plan) , format!("{:?}",result.unwrap()))
-    // }
+
+    #[test]
+    fn test_2_add_new_table() {
+        debug!("test_1_new_table");
+
+        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql");
+        let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
+        result1.as_ref().unwrap().apply_plan_up(&mut client);
+        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.2.2.sql");
+        info!("{:?}",result2);
+        // let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
+        result2.as_ref().unwrap().apply_plan_up(&mut client);
+        result2.as_ref().unwrap().apply_plan_down(&mut client);
+        result1.as_ref().unwrap().apply_plan_down(&mut client);
+
+        let plan = correct_plan_for_schema_2_2();
+        assert_eq!(format!("{:?}", plan), format!("{:?}", result2.unwrap()))
+    }
 }
