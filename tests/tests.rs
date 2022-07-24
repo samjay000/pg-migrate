@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn test_2_add_new_table() {
-        debug!("test_1_new_table");
+        debug!("test_2_add_new_table");
 
         let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql");
         let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
@@ -293,5 +293,23 @@ mod tests {
 
         let plan = correct_plan_for_schema_2_2();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result2.unwrap()))
+    }
+
+    #[test]
+    fn test_3_drop_table() {
+        debug!("test_3_drop_table");
+
+        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.3.1.sql");
+        let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
+        result1.as_ref().unwrap().apply_plan_up(&mut client);
+        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.3.2.sql");
+        info!("{:?}",result2);
+        // let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
+        result2.as_ref().unwrap().apply_plan_up(&mut client);
+        result2.as_ref().unwrap().apply_plan_down(&mut client);
+        result1.as_ref().unwrap().apply_plan_down(&mut client);
+
+        // let plan = correct_plan_for_schema_2_2();
+        // assert_eq!(format!("{:?}", plan), format!("{:?}", result2.unwrap()))
     }
 }
