@@ -1,6 +1,6 @@
 [package]
 name = "pg_sync"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
 #license-file = "LICENSE"
@@ -36,6 +36,9 @@ tabled = "0.7.0"
 
 log = "0.4"
 fern = "0.6"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
 
 [dev-dependencies]
 test-env-helpers = "0.2"

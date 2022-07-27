@@ -254,19 +254,19 @@ mod tests {
         debug!("test_2_add_new_table");
 
         let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql", "test_2".to_string());
+        info!("result1: {:?}",result1);
         let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
+        info!("######################################################");
         result1.as_ref().unwrap().apply_plan_up(&mut client);
-        info!("{:?}",result1);
-        info!("########{:?}",result1.as_ref().unwrap().sql_statements_for_step_up);
+        info!("######################################################");
         let (settings2, result2) = extract_plan_from_schema_definition("data/schema.2.2.sql", "test_2".to_string());
-        info!("{:?}",result2);
-        info!("########{:?}",result2.as_ref().unwrap().sql_statements_for_step_up);
-        // let plan = correct_plan_for_schema_2_2();
-        // assert_eq!(format!("{:?}", plan), format!("{:?}", result2.as_ref().unwrap()));
-
-        // result2.as_ref().unwrap().apply_plan_up(&mut client);
-        // result2.as_ref().unwrap().apply_plan_down(&mut client);
-        // result1.as_ref().unwrap().apply_plan_down(&mut client);
+        info!("result2: {:?}",result2);
+        let plan = correct_plan_for_schema_2_2();
+        assert_eq!(format!("{:?}", plan), format!("{:?}", result2.as_ref().unwrap()));
+        // info!("######################################################");
+        result2.as_ref().unwrap().apply_plan_up(&mut client);
+        result2.as_ref().unwrap().apply_plan_down(&mut client);
+        result1.as_ref().unwrap().apply_plan_down(&mut client);
     }
 
     // #[test]
@@ -275,10 +275,13 @@ mod tests {
 
         let (settings1, result1) = extract_plan_from_schema_definition("data/schema.3.1.sql", "public".to_string());
         let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
+        info!("######################################################");
         result1.as_ref().unwrap().apply_plan_up(&mut client);
+        info!("######################################################");
         let (settings2, result2) = extract_plan_from_schema_definition("data/schema.3.2.sql", "public".to_string());
         info!("{:?}",result2);
         // let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
+        info!("######################################################");
         result2.as_ref().unwrap().apply_plan_up(&mut client);
         result2.as_ref().unwrap().apply_plan_down(&mut client);
         result1.as_ref().unwrap().apply_plan_down(&mut client);
@@ -317,7 +320,8 @@ mod tests {
 
     fn correct_plan_for_schema_2_2() -> Plan {
         let mut plan = pg_sync::plan::Plan::new();
-        // Plan {table_statements_new: [, sql_statements_for_step_up: ["CREATE TABLE table22 (column221 TEXT)"], sql_statements_for_step_down: ["DROP TABLE table22"]
+        plan.schema_name = "test_2".to_string();
+        plan.schema_does_not_exist = false;
         plan.table_names_all_from_file.push("table21".to_string());
         plan.table_names_all_from_file.push("table22".to_string());
         plan.table_names_all_from_db.push("table21".to_string());

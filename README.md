@@ -61,7 +61,6 @@ ALTER TABLE table1
 
 #### TODO
 
-- Create new tables
 - Drop old tables
 - Alter add column
 - Alter drop columns
@@ -70,7 +69,13 @@ ALTER TABLE table1
 - Alter change primary key
 - Alter change primary key with identity type
 
+------------
+
 ### Change Log
+
+#### Ver 0.3.0
+
+- CREATE new tables
 
 #### Ver 0.2.0
 
