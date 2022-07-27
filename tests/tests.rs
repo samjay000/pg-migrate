@@ -249,7 +249,7 @@ mod tests {
     }
 
 
-    // #[test]
+    #[test]
     fn test_2_add_new_table() {
         debug!("test_2_add_new_table");
 
@@ -266,7 +266,7 @@ mod tests {
 
         // result2.as_ref().unwrap().apply_plan_up(&mut client);
         // result2.as_ref().unwrap().apply_plan_down(&mut client);
-        result1.as_ref().unwrap().apply_plan_down(&mut client);
+        // result1.as_ref().unwrap().apply_plan_down(&mut client);
     }
 
     // #[test]

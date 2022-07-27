@@ -21,7 +21,7 @@ your schema file and apply diff on your database.
 `
 
 ------------
-
+### Examples
 #### Example 1
 
 ```sql
@@ -70,5 +70,8 @@ ALTER TABLE table1
 - Alter change primary key
 - Alter change primary key with identity type
 
+### Change Log
 
+#### Ver 0.2.0
 
+- CREATE SCHEMA
