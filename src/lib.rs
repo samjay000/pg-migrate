@@ -259,8 +259,7 @@ pub fn apply_file_and_print_summary(args: &Args, settings: &settings::Settings) 
             print_plan_summary(&plan);
             if args.apply {
                 yes_apply_changes(&plan, &mut db_connection::make_connection(&settings.postgresql));
-            }
-            if args.dry_run {
+            } else if args.dry_run {
                 no_do_not_apply_changes();
             } else {
                 ask_do_you_want_to_apply_up(&plan, &mut db_connection::make_connection(&settings.postgresql));

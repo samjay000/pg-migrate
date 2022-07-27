@@ -202,6 +202,7 @@
  *    limitations under the License.
  */
 
+use log::info;
 use postgres::Client;
 use snafu::prelude::*;
 use sqlparser::ast::Statement;
@@ -229,6 +230,8 @@ pub struct Plan {
     pub tables_old: Vec<Statement>,
     pub sql_statements_for_step_up: Vec<String>,
     pub sql_statements_for_step_down: Vec<String>,
+    pub schema_does_not_exist: bool,
+    pub schema_name: String
 }
 
 impl Plan {
@@ -248,11 +251,17 @@ impl Plan {
             tables_new: vec![],
             tables_old: vec![],
             sql_statements_for_step_up: vec![],
-            sql_statements_for_step_down: vec![]
+            sql_statements_for_step_down: vec![],
+            schema_does_not_exist: false,
+            schema_name: "public".to_string()
         };
     }
 
     pub fn apply_plan_up(self: &Plan, client: &mut Client) {
+        if self.schema_does_not_exist {
+            let _ = client.execute(format!("CREATE SCHEMA {}", self.schema_name).as_str(), &[]);
+            let _ = client.execute(format!("SET search_path TO {}", self.schema_name).as_str(), &[]);
+        }
         for step in &self.sql_statements_for_step_up {
             let _ = client.execute(step.as_str(), &[]);
         }
@@ -260,6 +269,9 @@ impl Plan {
     pub fn apply_plan_down(self: &Plan, client: &mut Client) {
         for step in &self.sql_statements_for_step_down {
             let _ = client.execute(step.as_str(), &[]);
+        }
+        if self.schema_does_not_exist {
+            let _ = client.execute(format!("DROP SCHEMA {}", self.schema_name).as_str(), &[]);
         }
     }
 }

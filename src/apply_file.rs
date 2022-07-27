@@ -219,6 +219,8 @@ pub fn apply_file(files: Vec<String>, schema: &String, client: &mut Client) -> R
 
     debug!("files: {:?}",files);
 
+    create_schema_if_not_exist_or_public(&schema, client, &mut plan);
+    // client.execute("SET search_path TO myschema;", &[schema]);
     let dialect = PostgreSqlDialect {}; // or AnsiDialect, or your own dialect ...
     for file in files {
         let contents = file_loader::load(&file);
@@ -243,6 +245,18 @@ pub fn apply_file(files: Vec<String>, schema: &String, client: &mut Client) -> R
     make_sql_statements(&mut plan);
     make_reverse_plan(&mut plan, &schema, client);
     return Ok(plan);
+}
+
+fn create_schema_if_not_exist_or_public(schema: &String, client: &mut Client, plan: &mut Plan) {
+    debug!("!schema.eq_ignore_ascii_case(public): {} | {}",schema,!schema.eq_ignore_ascii_case("public"));
+    if !schema.eq_ignore_ascii_case("public") {
+        if let is_schema_exist = client.query_one("SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = $1)", &[schema]).unwrap() {
+            let schema_status: bool = is_schema_exist.get(0);
+            plan.schema_name = schema.to_string();
+            plan.schema_does_not_exist = !schema_status;
+            debug!("New schema {} found: status:{}",schema,schema_status);
+        }
+    }
 }
 
 fn fill_table_statements_new(plan: &mut Plan, ast: &Vec<Statement>) {

@@ -221,8 +221,76 @@ mod tests {
         pg_sync::setup_logger(log::LevelFilter::Debug).expect("Setting up logger failed with panic!.");
     }
 
-    fn extract_plan_from_schema_definition(file: &str) -> (Settings, Result<Plan, Error>) {
+    // #[test]
+    fn dummy_test_case() {
         let mut settings = pg_sync::make_settings(&"pg-sync".to_string());
+        let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
+        if let is_schema_exist = client.query_one("SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = $1)", &[&"dummy_test_case"]).unwrap() {
+            let schema_status: bool = is_schema_exist.get(0);
+            debug!("schema_status; {}",schema_status);
+        }
+        let _ = client.execute(format!("CREATE SCHEMA {} AUTHORIZATION postgres", "dummy_test_case").as_str(), &[]);
+        let _ = client.execute(format!("SET search_path TO {}", "dummy_test_case").as_str(), &[]);
+        let _ = client.execute("create table test_table_1()", &[]);
+    }
+
+    #[test]
+    fn test_1_new_table() {
+        debug!("test_1_new_table");
+        let (settings, result) = extract_plan_from_schema_definition("data/schema.1.sql", "test_1".to_string());
+        info!("{:?}",result);
+        let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
+
+        let plan = correct_plan_for_schema_1();
+        assert_eq!(format!("{:?}", plan), format!("{:?}", result.as_ref().unwrap()));
+        info!("######################################################");
+        result.as_ref().unwrap().apply_plan_up(&mut client);
+        result.as_ref().unwrap().apply_plan_down(&mut client);
+    }
+
+
+    // #[test]
+    fn test_2_add_new_table() {
+        debug!("test_2_add_new_table");
+
+        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql", "test_2".to_string());
+        let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
+        result1.as_ref().unwrap().apply_plan_up(&mut client);
+        info!("{:?}",result1);
+        info!("########{:?}",result1.as_ref().unwrap().sql_statements_for_step_up);
+        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.2.2.sql", "test_2".to_string());
+        info!("{:?}",result2);
+        info!("########{:?}",result2.as_ref().unwrap().sql_statements_for_step_up);
+        // let plan = correct_plan_for_schema_2_2();
+        // assert_eq!(format!("{:?}", plan), format!("{:?}", result2.as_ref().unwrap()));
+
+        // result2.as_ref().unwrap().apply_plan_up(&mut client);
+        // result2.as_ref().unwrap().apply_plan_down(&mut client);
+        result1.as_ref().unwrap().apply_plan_down(&mut client);
+    }
+
+    // #[test]
+    fn test_3_drop_table() {
+        debug!("test_3_drop_table");
+
+        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.3.1.sql", "public".to_string());
+        let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
+        result1.as_ref().unwrap().apply_plan_up(&mut client);
+        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.3.2.sql", "public".to_string());
+        info!("{:?}",result2);
+        // let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
+        result2.as_ref().unwrap().apply_plan_up(&mut client);
+        result2.as_ref().unwrap().apply_plan_down(&mut client);
+        result1.as_ref().unwrap().apply_plan_down(&mut client);
+
+        // let plan = correct_plan_for_schema_2_2();
+        // assert_eq!(format!("{:?}", plan), format!("{:?}", result2.unwrap()))
+    }
+
+
+    fn extract_plan_from_schema_definition(file: &str, schema_name: String) -> (Settings, Result<Plan, Error>) {
+        let mut settings = pg_sync::make_settings(&"pg-sync".to_string());
+        settings.postgresql.schema = Some(schema_name);
         settings.files = Some(Files {
             file: Some(file.to_string()),
             files: None,
@@ -234,6 +302,8 @@ mod tests {
 
     fn correct_plan_for_schema_1() -> Plan {
         let mut plan = pg_sync::plan::Plan::new();
+        plan.schema_name = "test_1".to_string();
+        plan.schema_does_not_exist = true;
         plan.table_names_all_from_file.push("table1".to_string());
         plan.table_names_unique_from_file.push("table1".to_string());
         plan.table_names_new.push("table1".to_string());
@@ -264,52 +334,4 @@ mod tests {
         plan
     }
 
-    #[test]
-    fn test_1_new_table() {
-        debug!("test_1_new_table");
-        let (settings, result) = extract_plan_from_schema_definition("data/schema.1.sql");
-        info!("{:?}",result);
-        let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
-        result.as_ref().unwrap().apply_plan_up(&mut client);
-        result.as_ref().unwrap().apply_plan_down(&mut client);
-        let plan = correct_plan_for_schema_1();
-        assert_eq!(format!("{:?}", plan), format!("{:?}", result.unwrap()))
-    }
-
-
-    #[test]
-    fn test_2_add_new_table() {
-        debug!("test_2_add_new_table");
-
-        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql");
-        let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
-        result1.as_ref().unwrap().apply_plan_up(&mut client);
-        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.2.2.sql");
-        info!("{:?}",result2);
-        // let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
-        result2.as_ref().unwrap().apply_plan_up(&mut client);
-        result2.as_ref().unwrap().apply_plan_down(&mut client);
-        result1.as_ref().unwrap().apply_plan_down(&mut client);
-
-        let plan = correct_plan_for_schema_2_2();
-        assert_eq!(format!("{:?}", plan), format!("{:?}", result2.unwrap()))
-    }
-
-    #[test]
-    fn test_3_drop_table() {
-        debug!("test_3_drop_table");
-
-        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.3.1.sql");
-        let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
-        result1.as_ref().unwrap().apply_plan_up(&mut client);
-        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.3.2.sql");
-        info!("{:?}",result2);
-        // let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
-        result2.as_ref().unwrap().apply_plan_up(&mut client);
-        result2.as_ref().unwrap().apply_plan_down(&mut client);
-        result1.as_ref().unwrap().apply_plan_down(&mut client);
-
-        // let plan = correct_plan_for_schema_2_2();
-        // assert_eq!(format!("{:?}", plan), format!("{:?}", result2.unwrap()))
-    }
 }
