@@ -209,8 +209,9 @@ use test_env_helpers::*;
 #[before_all]
 mod tests {
     use log::{debug, info};
-    use sqlparser::ast::{ColumnDef, HiveDistributionStyle, HiveFormat, Ident, ObjectName};
-    use sqlparser::ast::DataType::Text;
+    use sqlparser::ast::{ColumnDef, HiveDistributionStyle, HiveFormat, Ident, ObjectName, ObjectType, Statement};
+    use sqlparser::ast::DataType::{Int, Text};
+    use sqlparser::ast::OnCommit::Drop;
     use sqlparser::ast::Statement::CreateTable;
 
     use pg_sync;
@@ -236,8 +237,7 @@ mod tests {
 
     #[test]
     fn test_1_new_table() {
-        debug!("test_1_new_table");
-        let (settings, result) = extract_plan_from_schema_definition("data/schema.1.sql", "test_1".to_string());
+        let (settings, result) = extract_plan_from_schema_definition("data/schema.1.sql", "test_1_new_table".to_string());
         info!("{:?}",result);
         let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
 
@@ -251,15 +251,13 @@ mod tests {
 
     #[test]
     fn test_2_add_new_table() {
-        debug!("test_2_add_new_table");
-
-        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql", "test_2".to_string());
+        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql", "test_2_add_new_table".to_string());
         info!("result1: {:?}",result1);
         let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
         info!("######################################################");
         result1.as_ref().unwrap().apply_plan_up(&mut client);
         info!("######################################################");
-        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.2.2.sql", "test_2".to_string());
+        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.2.2.sql", "test_2_add_new_table".to_string());
         info!("result2: {:?}",result2);
         let plan = correct_plan_for_schema_2_2();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result2.as_ref().unwrap()));
@@ -269,25 +267,47 @@ mod tests {
         result1.as_ref().unwrap().apply_plan_down(&mut client);
     }
 
-    // #[test]
-    fn test_3_drop_table() {
-        debug!("test_3_drop_table");
-
-        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.3.1.sql", "public".to_string());
+    #[test]
+    fn test_3_add_new_table() {
+        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.3.1.sql", "test_3_add_new_table".to_string());
         let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
-        info!("######################################################");
+        info!("test_3_add_new_table:result1: {:?}",result1.as_ref().unwrap().sql_statements_for_step_up);
+        // assert_eq!(format!("{:?}", plan), format!("{:?}", result1.as_ref().unwrap()));
         result1.as_ref().unwrap().apply_plan_up(&mut client);
-        info!("######################################################");
-        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.3.2.sql", "public".to_string());
-        info!("{:?}",result2);
-        // let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
-        info!("######################################################");
-        result2.as_ref().unwrap().apply_plan_up(&mut client);
-        result2.as_ref().unwrap().apply_plan_down(&mut client);
-        result1.as_ref().unwrap().apply_plan_down(&mut client);
 
-        // let plan = correct_plan_for_schema_2_2();
-        // assert_eq!(format!("{:?}", plan), format!("{:?}", result2.unwrap()))
+        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.3.2.sql", "test_3_add_new_table".to_string());
+        info!("test_3_add_new_table:result2: {:?}",result2.as_ref().unwrap().sql_statements_for_step_up);
+        let plan = correct_plan_for_schema_3_2();
+        assert_eq!(format!("{:?}", plan), format!("{:?}", result2.as_ref().unwrap()));
+
+        result2.as_ref().unwrap().apply_plan_up(&mut client);
+
+        let (settings3, result3) = extract_plan_from_schema_definition("data/schema.3.3.sql", "test_3_add_new_table".to_string());
+        info!("test_3_add_new_table:result1]3: {:?}",result3.as_ref().unwrap().sql_statements_for_step_up);
+        let plan = correct_plan_for_schema_3_3();
+        assert_eq!(format!("{:?}", plan), format!("{:?}", result3.as_ref().unwrap()));
+
+
+        result3.as_ref().unwrap().apply_plan_up(&mut client);
+
+        let (settings4, result4) = extract_plan_from_schema_definition("data/schema.3.4.sql", "test_3_add_new_table".to_string());
+        info!("test_3_add_new_table:result4: {:?}",result4.as_ref().unwrap().sql_statements_for_step_up);
+        let plan = correct_plan_for_schema_3_4();
+        assert_eq!(format!("{:?}", plan), format!("{:?}", result4.as_ref().unwrap()));
+
+        result4.as_ref().unwrap().apply_plan_up(&mut client);
+
+        let (settings5, result5) = extract_plan_from_schema_definition("data/schema.3.5.sql", "test_3_add_new_table".to_string());
+        info!("test_3_add_new_table:result5: {:?}",result5.as_ref().unwrap().sql_statements_for_step_up);
+        let plan = correct_plan_for_schema_3_5();
+        assert_eq!(format!("{:?}", plan), format!("{:?}", result5.as_ref().unwrap()));
+
+        result5.as_ref().unwrap().apply_plan_up(&mut client);
+
+        // result4.as_ref().unwrap().apply_plan_down(&mut client);
+        // result3.as_ref().unwrap().apply_plan_down(&mut client);
+        // result2.as_ref().unwrap().apply_plan_down(&mut client);
+        // result1.as_ref().unwrap().apply_plan_down(&mut client);
     }
 
 
@@ -305,7 +325,7 @@ mod tests {
 
     fn correct_plan_for_schema_1() -> Plan {
         let mut plan = pg_sync::plan::Plan::new();
-        plan.schema_name = "test_1".to_string();
+        plan.schema_name = "test_1_new_table".to_string();
         plan.schema_does_not_exist = true;
         plan.table_names_all_from_file.push("table1".to_string());
         plan.table_names_unique_from_file.push("table1".to_string());
@@ -320,7 +340,7 @@ mod tests {
 
     fn correct_plan_for_schema_2_2() -> Plan {
         let mut plan = pg_sync::plan::Plan::new();
-        plan.schema_name = "test_2".to_string();
+        plan.schema_name = "test_2_add_new_table".to_string();
         plan.schema_does_not_exist = false;
         plan.table_names_all_from_file.push("table21".to_string());
         plan.table_names_all_from_file.push("table22".to_string());
@@ -338,4 +358,199 @@ mod tests {
         plan
     }
 
+
+    fn correct_plan_for_schema_3_2() -> Plan {
+        let mut plan = pg_sync::plan::Plan::new();
+        plan.schema_name = "test_3_add_new_table".to_string();
+        plan.schema_does_not_exist = false;
+        plan.table_names_all_from_file.push("table32".to_string());
+        plan.table_names_all_from_db.push("table31".to_string());
+        plan.table_names_unique_from_file.push("table32".to_string());
+        plan.table_names_new.push("table32".to_string());
+        plan.table_names_dropped.push("table31".to_string());
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table32".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column321".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_dropped.push(
+            Statement::Drop {
+                object_type: ObjectType::Table,
+                if_exists: false,
+                names: vec![ObjectName(vec![Ident { value: "table31".to_string(), quote_style: None }])],
+                cascade: false,
+                purge: false,
+            }
+        );
+        plan.sql_statements_for_step_up.push("DROP TABLE table31".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table32 (column321 TEXT)".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table32".to_string());
+        plan
+    }
+
+    fn correct_plan_for_schema_3_3() -> Plan {
+        let mut plan = pg_sync::plan::Plan::new();
+        plan.schema_name = "test_3_add_new_table".to_string();
+        plan.schema_does_not_exist = false;
+        plan.table_names_all_from_file.push("table331".to_string());
+        plan.table_names_all_from_file.push("table332".to_string());
+        plan.table_names_all_from_db.push("table32".to_string());
+        plan.table_names_unique_from_file.push("table331".to_string());
+        plan.table_names_unique_from_file.push("table332".to_string());
+        plan.table_names_new.push("table331".to_string());
+        plan.table_names_new.push("table332".to_string());
+        plan.table_names_dropped.push("table32".to_string());
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table331".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3311".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table332".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3321".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }, ColumnDef { name: Ident { value: "column3322".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_dropped.push(
+            Statement::Drop {
+                object_type: ObjectType::Table,
+                if_exists: false,
+                names: vec![ObjectName(vec![Ident { value: "table32".to_string(), quote_style: None }])],
+                cascade: false,
+                purge: false,
+            }
+        );
+        plan.sql_statements_for_step_up.push("DROP TABLE table32".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table331 (column3311 TEXT)".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table332 (column3321 TEXT, column3322 TEXT)".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table331".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table332".to_string());
+        plan
+    }
+
+    fn correct_plan_for_schema_3_4() -> Plan {
+        let mut plan = pg_sync::plan::Plan::new();
+        plan.schema_name = "test_3_add_new_table".to_string();
+        plan.schema_does_not_exist = false;
+        plan.table_names_all_from_file.push("table341".to_string());
+        plan.table_names_all_from_file.push("table342".to_string());
+        plan.table_names_all_from_file.push("table343".to_string());
+        plan.table_names_all_from_db.push("table331".to_string());
+        plan.table_names_all_from_db.push("table332".to_string());
+        plan.table_names_unique_from_file.push("table341".to_string());
+        plan.table_names_unique_from_file.push("table342".to_string());
+        plan.table_names_unique_from_file.push("table343".to_string());
+        plan.table_names_new.push("table341".to_string());
+        plan.table_names_new.push("table342".to_string());
+        plan.table_names_new.push("table343".to_string());
+        plan.table_names_dropped.push("table331".to_string());
+        plan.table_names_dropped.push("table332".to_string());
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table341".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3411".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table342".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3421".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }, ColumnDef { name: Ident { value: "column3422".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table343".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3431".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }, ColumnDef { name: Ident { value: "column3432".to_string(), quote_style: None }, data_type: Int(None), collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_dropped.push(
+            Statement::Drop {
+                object_type: ObjectType::Table,
+                if_exists: false,
+                names: vec![ObjectName(vec![Ident { value: "table331".to_string(), quote_style: None }])],
+                cascade: false,
+                purge: false,
+            }
+        );
+        plan.table_statements_dropped.push(
+            Statement::Drop {
+                object_type: ObjectType::Table,
+                if_exists: false,
+                names: vec![ObjectName(vec![Ident { value: "table332".to_string(), quote_style: None }])],
+                cascade: false,
+                purge: false,
+            }
+        );
+        plan.sql_statements_for_step_up.push("DROP TABLE table331".to_string());
+        plan.sql_statements_for_step_up.push("DROP TABLE table332".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table341 (column3411 TEXT)".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table342 (column3421 TEXT, column3422 TEXT)".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table343 (column3431 TEXT, column3432 INT)".to_string());
+
+        plan.sql_statements_for_step_down.push("DROP TABLE table341".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table342".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table343".to_string());
+        plan
+    }
+
+    fn correct_plan_for_schema_3_5() -> Plan {
+        let mut plan = pg_sync::plan::Plan::new();
+        plan.schema_name = "test_3_add_new_table".to_string();
+        plan.schema_does_not_exist = false;
+        plan.table_names_all_from_file.push("table351".to_string());
+        plan.table_names_all_from_file.push("table352".to_string());
+        plan.table_names_all_from_file.push("table353".to_string());
+        plan.table_names_all_from_file.push("table354".to_string());
+        plan.table_names_all_from_db.push("table341".to_string());
+        plan.table_names_all_from_db.push("table342".to_string());
+        plan.table_names_all_from_db.push("table343".to_string());
+        plan.table_names_unique_from_file.push("table351".to_string());
+        plan.table_names_unique_from_file.push("table352".to_string());
+        plan.table_names_unique_from_file.push("table353".to_string());
+        plan.table_names_unique_from_file.push("table354".to_string());
+        plan.table_names_new.push("table351".to_string());
+        plan.table_names_new.push("table352".to_string());
+        plan.table_names_new.push("table353".to_string());
+        plan.table_names_new.push("table354".to_string());
+        plan.table_names_dropped.push("table341".to_string());
+        plan.table_names_dropped.push("table342".to_string());
+        plan.table_names_dropped.push("table343".to_string());
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table351".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3511".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table352".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3521".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }, ColumnDef { name: Ident { value: "column3522".to_string(), quote_style: None }, data_type: Text, collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table353".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3532".to_string(), quote_style: None }, data_type: Int(None), collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_new.push(
+            CreateTable { or_replace: false, temporary: false, external: false, global: None, if_not_exists: false, name: ObjectName(vec![Ident { value: "table354".to_string(), quote_style: None }]), columns: vec![ColumnDef { name: Ident { value: "column3542".to_string(), quote_style: None }, data_type: Int(None), collation: None, options: vec![] }], constraints: vec![], hive_distribution: HiveDistributionStyle::NONE, hive_formats: Some(HiveFormat { row_format: None, storage: None, location: None }), table_properties: vec![], with_options: vec![], file_format: None, location: None, query: None, without_rowid: false, like: None, engine: None, default_charset: None, collation: None, on_commit: None }
+        );
+        plan.table_statements_dropped.push(
+            Statement::Drop {
+                object_type: ObjectType::Table,
+                if_exists: false,
+                names: vec![ObjectName(vec![Ident { value: "table341".to_string(), quote_style: None }])],
+                cascade: false,
+                purge: false,
+            }
+        );
+        plan.table_statements_dropped.push(
+            Statement::Drop {
+                object_type: ObjectType::Table,
+                if_exists: false,
+                names: vec![ObjectName(vec![Ident { value: "table342".to_string(), quote_style: None }])],
+                cascade: false,
+                purge: false,
+            }
+        );
+        plan.table_statements_dropped.push(
+            Statement::Drop {
+                object_type: ObjectType::Table,
+                if_exists: false,
+                names: vec![ObjectName(vec![Ident { value: "table343".to_string(), quote_style: None }])],
+                cascade: false,
+                purge: false,
+            }
+        );
+
+        plan.sql_statements_for_step_up.push("DROP TABLE table341".to_string());
+        plan.sql_statements_for_step_up.push("DROP TABLE table342".to_string());
+        plan.sql_statements_for_step_up.push("DROP TABLE table343".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table351 (column3511 TEXT)".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table352 (column3521 TEXT, column3522 TEXT)".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table353 (column3532 INT)".to_string());
+        plan.sql_statements_for_step_up.push("CREATE TABLE table354 (column3542 INT)".to_string());
+
+        plan.sql_statements_for_step_down.push("DROP TABLE table351".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table352".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table353".to_string());
+        plan.sql_statements_for_step_down.push("DROP TABLE table354".to_string());
+        plan
+    }
 }

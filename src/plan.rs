@@ -262,11 +262,13 @@ impl Plan {
             let _ = client.execute(format!("CREATE SCHEMA {}", self.schema_name).as_str(), &[]);
             let _ = client.execute(format!("SET search_path TO {}", self.schema_name).as_str(), &[]);
         }
+        let _ = client.execute(format!("SET search_path TO {}", self.schema_name).as_str(), &[]);
         for step in &self.sql_statements_for_step_up {
             let _ = client.execute(step.as_str(), &[]);
         }
     }
     pub fn apply_plan_down(self: &Plan, client: &mut Client) {
+        let _ = client.execute(format!("SET search_path TO {}", self.schema_name).as_str(), &[]);
         for step in &self.sql_statements_for_step_down {
             let _ = client.execute(step.as_str(), &[]);
         }

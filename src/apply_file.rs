@@ -316,7 +316,7 @@ fn filter_table_names_new(plan: &mut Plan) {
 }
 
 fn fetch_table_names_and_table_names_existing_or_drop(schema: &&String, client: &mut Client, plan: &mut Plan) {
-    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 ", &[schema]).unwrap() {
+    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 order by table_name", &[schema]).unwrap() {
         let table_name: &str = row_table.get(0);
         for name in &plan.table_names_unique_from_file {
             if name == table_name {
@@ -341,7 +341,7 @@ fn fetch_table_names_all_from_file(plan: &mut Plan, ast: &Vec<Statement>) {
 }
 
 fn fetch_table_names_all_from_db(schema: &&String, client: &mut Client, plan: &mut Plan) {
-    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 ", &[schema]).unwrap() {
+    for row_table in client.query("Select table_name from information_schema.tables where table_schema= $1 order by table_name", &[schema]).unwrap() {
         let table_name: &str = row_table.get(0);
         plan.table_names_all_from_db.push(table_name.to_string());
     }
@@ -349,7 +349,7 @@ fn fetch_table_names_all_from_db(schema: &&String, client: &mut Client, plan: &m
 
 fn make_column_def_by_table_name(schema: &&String, client: &mut Client, table_name: &String) -> Vec<ColumnDef> {
     let mut column_defs_from_db: Vec<ColumnDef> = vec![];
-    for row_column in client.query("Select * from information_schema.columns where table_schema = $1 and table_name= $2 ", &[&schema, &table_name.to_string()]).unwrap() {
+    for row_column in client.query("Select * from information_schema.columns where table_schema = $1 and table_name= $2 order by table_name", &[&schema, &table_name.to_string()]).unwrap() {
         let table_catalog: &str = row_column.get("table_catalog"); //Name of the database containing the table (always the current database)
         let table_schema: &str = row_column.get("table_schema"); //Name of the schema containing the table
         let table_name: &str = row_column.get("table_name"); //Name of the table
