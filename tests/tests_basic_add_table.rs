@@ -237,7 +237,7 @@ mod tests_basic_add_table {
 
     #[test]
     fn test_1_new_table() {
-        let (settings, result) = extract_plan_from_schema_definition("data/schema.1.sql", "test_1_new_table".to_string());
+        let (settings, result) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_1_add_new_table.1.sql", "test_1_new_table".to_string());
         info!("{:?}",result);
         let mut client = pg_sync::db_connection::make_connection(&settings.postgresql);
 
@@ -251,13 +251,13 @@ mod tests_basic_add_table {
 
     #[test]
     fn test_2_add_new_table() {
-        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.2.1.sql", "test_2_add_new_table".to_string());
+        let (settings1, result1) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_2_add_new_table.1.sql", "test_2_add_new_table".to_string());
         info!("result1: {:?}",result1);
         let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
         info!("######################################################");
         result1.as_ref().unwrap().apply_plan_up(&mut client);
         info!("######################################################");
-        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.2.2.sql", "test_2_add_new_table".to_string());
+        let (settings2, result2) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_2_add_new_table.2.sql", "test_2_add_new_table".to_string());
         info!("result2: {:?}",result2);
         let plan = correct_plan_for_schema_2_2();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result2.as_ref().unwrap()));
@@ -269,20 +269,20 @@ mod tests_basic_add_table {
 
     #[test]
     fn test_3_add_new_table() {
-        let (settings1, result1) = extract_plan_from_schema_definition("data/schema.3.1.sql", "test_3_add_new_table".to_string());
+        let (settings1, result1) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_3_add_new_table.1.sql", "test_3_add_new_table".to_string());
         let mut client = pg_sync::db_connection::make_connection(&settings1.postgresql);
         info!("test_3_add_new_table:result1: {:?}",result1.as_ref().unwrap().sql_statements_for_step_up);
         // assert_eq!(format!("{:?}", plan), format!("{:?}", result1.as_ref().unwrap()));
         result1.as_ref().unwrap().apply_plan_up(&mut client);
 
-        let (settings2, result2) = extract_plan_from_schema_definition("data/schema.3.2.sql", "test_3_add_new_table".to_string());
+        let (settings2, result2) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_3_add_new_table.2.sql", "test_3_add_new_table".to_string());
         info!("test_3_add_new_table:result2: {:?}",result2.as_ref().unwrap().sql_statements_for_step_up);
         let plan = correct_plan_for_schema_3_2();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result2.as_ref().unwrap()));
 
         result2.as_ref().unwrap().apply_plan_up(&mut client);
 
-        let (settings3, result3) = extract_plan_from_schema_definition("data/schema.3.3.sql", "test_3_add_new_table".to_string());
+        let (settings3, result3) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_3_add_new_table.3.sql", "test_3_add_new_table".to_string());
         info!("test_3_add_new_table:result1]3: {:?}",result3.as_ref().unwrap().sql_statements_for_step_up);
         let plan = correct_plan_for_schema_3_3();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result3.as_ref().unwrap()));
@@ -290,14 +290,14 @@ mod tests_basic_add_table {
 
         result3.as_ref().unwrap().apply_plan_up(&mut client);
 
-        let (settings4, result4) = extract_plan_from_schema_definition("data/schema.3.4.sql", "test_3_add_new_table".to_string());
+        let (settings4, result4) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_3_add_new_table.4.sql", "test_3_add_new_table".to_string());
         info!("test_3_add_new_table:result4: {:?}",result4.as_ref().unwrap().sql_statements_for_step_up);
         let plan = correct_plan_for_schema_3_4();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result4.as_ref().unwrap()));
 
         result4.as_ref().unwrap().apply_plan_up(&mut client);
 
-        let (settings5, result5) = extract_plan_from_schema_definition("data/schema.3.5.sql", "test_3_add_new_table".to_string());
+        let (settings5, result5) = extract_plan_from_schema_definition("data/tests_basic_add_table/schema.test_3_add_new_table.5.sql", "test_3_add_new_table".to_string());
         info!("test_3_add_new_table:result5: {:?}",result5.as_ref().unwrap().sql_statements_for_step_up);
         let plan = correct_plan_for_schema_3_5();
         assert_eq!(format!("{:?}", plan), format!("{:?}", result5.as_ref().unwrap()));
