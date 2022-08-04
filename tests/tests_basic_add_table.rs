@@ -207,7 +207,7 @@ use test_env_helpers::*;
 
 #[cfg(test)]
 #[before_all]
-mod tests {
+mod tests_basic_add_table {
     use log::{debug, info};
     use sqlparser::ast::{ColumnDef, HiveDistributionStyle, HiveFormat, Ident, ObjectName, ObjectType, Statement};
     use sqlparser::ast::DataType::{Int, Text};
@@ -304,10 +304,11 @@ mod tests {
 
         result5.as_ref().unwrap().apply_plan_up(&mut client);
 
-        // result4.as_ref().unwrap().apply_plan_down(&mut client);
-        // result3.as_ref().unwrap().apply_plan_down(&mut client);
-        // result2.as_ref().unwrap().apply_plan_down(&mut client);
-        // result1.as_ref().unwrap().apply_plan_down(&mut client);
+        result5.as_ref().unwrap().apply_plan_down(&mut client);
+        result4.as_ref().unwrap().apply_plan_down(&mut client);
+        result3.as_ref().unwrap().apply_plan_down(&mut client);
+        result2.as_ref().unwrap().apply_plan_down(&mut client);
+        result1.as_ref().unwrap().apply_plan_down(&mut client);
     }
 
 
