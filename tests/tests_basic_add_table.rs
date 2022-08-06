@@ -219,7 +219,7 @@ mod tests_basic_add_table {
     use pg_sync::settings::{Files, Settings};
 
     fn before_all() {
-        pg_sync::setup_logger(log::LevelFilter::Debug).expect("Setting up logger failed with panic!.");
+        // pg_sync::setup_logger(log::LevelFilter::Debug).expect("Setting up logger failed with panic!.");
     }
 
     // #[test]

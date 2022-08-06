@@ -406,56 +406,97 @@ fn make_column_def_by_table_name(schema: &&String, client: &mut Client, table_na
 
 fn diff_from_table_statements(table_name: &ObjectName, from_file: Vec<ColumnDef>, from_db: Vec<ColumnDef>) -> Vec<Statement> {
     let mut table_statement_updated: Vec<Statement> = vec![];
-    for column_file in &from_file {
-        for column_db in &from_db {
-            debug!("{},{}", column_file, column_db);
-            if column_file.name.value == column_db.name.value {
-                debug!("diff_from_table_statements: {},{}", column_file, column_db);
-                if column_file.data_type != column_db.data_type {
-                    table_statement_updated.push(
-                        Statement::AlterTable {
-                            name: table_name.clone(),
-                            operation: AlterTableOperation::DropColumn {
-                                column_name: column_file.name.clone(),
-                                if_exists: false,
-                                cascade: false,
-                            },
-                        }
-                    );
-                    table_statement_updated.push(
-                        Statement::AlterTable {
-                            name: table_name.clone(),
-                            operation: AlterTableOperation::AddColumn {
-                                column_def: ColumnDef {
-                                    name: column_file.name.clone(),
-                                    data_type: column_file.data_type.clone(),
-                                    collation: None,
-                                    options: vec![],
-                                },
-                            },
-                        }
-                    );
-                    // With cast
-                    // table_statement_updated.push(
-                    //     Statement::AlterTable {
-                    //         name: table_name.clone(),
-                    //         operation: AlterTableOperation::AlterColumn {
-                    //             column_name: column_file.name.clone(),
-                    //             op: AlterColumnOperation::SetDataType { data_type: column_file.data_type.clone(), using:
-                    //             // Box::<>(Identifier(Ident { value: column_file.name.value, quote_style: None })
-                    //             Some(Cast { expr: Box::new(Expr::Identifier(column_file.name.clone())), data_type: column_file.data_type.clone() })
-                    //             },
-                    //         },
-                    //     }
-                    // );
-                }
-                break;
+    let new_columns_from_file = filter_column_def_in_only_a_not_in_b(&from_file, &from_db);
+    debug!("new_columns_from_file: {:?}",new_columns_from_file);
+    for column in new_columns_from_file {
+        table_statement_updated.push(
+            Statement::AlterTable {
+                name: table_name.clone(),
+                operation: AlterTableOperation::AddColumn {
+                    column_def: ColumnDef {
+                        name: column.name.clone(),
+                        data_type: column.data_type.clone(),
+                        collation: None,
+                        options: column.options,
+                    },
+                },
             }
-        }
+        );
     }
+
+    let old_columns_from_db = filter_column_def_in_only_a_not_in_b(&from_db, &from_file);
+    debug!("old_columns_from_db:{:?}",old_columns_from_db);
+    for column in old_columns_from_db {
+        table_statement_updated.push(
+            Statement::AlterTable {
+                name: table_name.clone(),
+                operation: AlterTableOperation::DropColumn {
+                    column_name: column.name.clone(),
+                    if_exists: false,
+                    cascade: false,
+                },
+            }
+        );
+    }
+    // for column_file in &from_file {
+    //     for column_db in &from_db {
+    //         debug!("{},{}", column_file, column_db);
+    //         if column_file.name.value == column_db.name.value {
+    //             debug!("diff_from_table_statements: {},{}", column_file, column_db);
+    //             if column_file.data_type != column_db.data_type {
+    //                 table_statement_updated.push(
+    //                     Statement::AlterTable {
+    //                         name: table_name.clone(),
+    //                         operation: AlterTableOperation::DropColumn {
+    //                             column_name: column_file.name.clone(),
+    //                             if_exists: false,
+    //                             cascade: false,
+    //                         },
+    //                     }
+    //                 );
+    //                 table_statement_updated.push(
+    //                     Statement::AlterTable {
+    //                         name: table_name.clone(),
+    //                         operation: AlterTableOperation::AddColumn {
+    //                             column_def: ColumnDef {
+    //                                 name: column_file.name.clone(),
+    //                                 data_type: column_file.data_type.clone(),
+    //                                 collation: None,
+    //                                 options: vec![],
+    //                             },
+    //                         },
+    //                     }
+    //                 );
+    //                 // With cast
+    //                 // table_statement_updated.push(
+    //                 //     Statement::AlterTable {
+    //                 //         name: table_name.clone(),
+    //                 //         operation: AlterTableOperation::AlterColumn {
+    //                 //             column_name: column_file.name.clone(),
+    //                 //             op: AlterColumnOperation::SetDataType { data_type: column_file.data_type.clone(), using:
+    //                 //             // Box::<>(Identifier(Ident { value: column_file.name.value, quote_style: None })
+    //                 //             Some(Cast { expr: Box::new(Expr::Identifier(column_file.name.clone())), data_type: column_file.data_type.clone() })
+    //                 //             },
+    //                 //         },
+    //                 //     }
+    //                 // );
+    //             }
+    //             break;
+    //         }
+    //     }
+    // }
     return table_statement_updated;
 }
 
+fn filter_column_def_in_only_a_not_in_b(a: &Vec<ColumnDef>, b: &Vec<ColumnDef>) -> Vec<ColumnDef> {
+    let mut filtered: Vec<ColumnDef> = vec![];
+    for column_a in a {
+        if !b.contains(column_a) {
+            filtered.push(column_a.clone());
+        }
+    }
+    return filtered;
+}
 
 fn make_sql_statements(plan: &mut Plan) {
     for table_statement_dropped in &plan.table_statements_dropped {
@@ -510,6 +551,33 @@ fn make_reverse_plan(plan: &mut Plan, schema: &&String, client: &mut Client) {
     for table_statements_change in &plan.table_statements_changes {
         match table_statements_change {
             Statement::Drop { object_type, if_exists, names, cascade, purge } => {}
+            Statement::AlterTable { name, operation } => {
+                match operation {
+                    AlterTableOperation::AddConstraint(_) => {}
+                    AlterTableOperation::AddColumn { column_def } => {
+                        plan.sql_statements_for_step_down.push(
+                            Statement::AlterTable {
+                                name: name.clone(),
+                                operation: AlterTableOperation::DropColumn {
+                                    column_name: column_def.name.clone(),
+                                    if_exists: false,
+                                    cascade: false,
+                                },
+                            }.to_string()
+                        );
+                    }
+                    AlterTableOperation::DropConstraint { .. } => {}
+                    AlterTableOperation::DropColumn { .. } => {}
+                    AlterTableOperation::RenamePartitions { .. } => {}
+                    AlterTableOperation::AddPartitions { .. } => {}
+                    AlterTableOperation::DropPartitions { .. } => {}
+                    AlterTableOperation::RenameColumn { .. } => {}
+                    AlterTableOperation::RenameTable { .. } => {}
+                    AlterTableOperation::ChangeColumn { .. } => {}
+                    AlterTableOperation::RenameConstraint { .. } => {}
+                    AlterTableOperation::AlterColumn { .. } => {}
+                }
+            }
             _ => {}
         }
     }
