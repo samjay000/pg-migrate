@@ -207,6 +207,17 @@ use crate::settings::Postgresql;
 
 pub fn make_connection(config: &Postgresql) -> Client {
     // let client = Client::connect(format!("host={} user={} dbname={}", config.host, config.user, config.dbname).as_str(), NoTls).unwrap();
-    let client = Client::connect(format!("postgresql://{}:{}@{}:{}/{}", config.user, config.password, config.host, config.port.as_ref().unwrap_or(&"5432".to_string()), config.dbname).as_str(), NoTls).unwrap();
-    return client;
+    Client::connect(
+        format!(
+            "postgresql://{}:{}@{}:{}/{}",
+            config.user,
+            config.password,
+            config.host,
+            config.port.as_ref().unwrap_or(&"5432".to_string()),
+            config.dbname
+        )
+            .as_str(),
+        NoTls,
+    )
+        .unwrap()
 }

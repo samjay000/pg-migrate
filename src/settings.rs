@@ -345,6 +345,6 @@ impl Settings {
             });
             file_list.push("schema.sql".to_string());
         }
-        return file_list;
+        file_list
     }
 }

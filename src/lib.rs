@@ -208,27 +208,27 @@ use log::debug;
 use postgres::Client;
 use sqlparser::ast::Statement;
 use sqlparser::parser::Parser as SQLParser;
-use version::{Version, version};
+use version::{version, Version};
 
 use crate::arguments::Args;
 use crate::plan::{Error, Plan};
 use crate::settings::Settings;
 
-mod file_loader;
-pub mod settings;
+mod apply_file;
 mod arguments;
 pub mod db_connection;
-mod apply_file;
+mod file_loader;
 pub mod plan;
+pub mod settings;
 
 pub fn start_processing() {
     let args: Args = arguments::Args::parse();
     setup_logger(args.log_level).expect("Setting up logger failed with panic!.");
-    debug!("{:?}",args);
+    debug!("{:?}", args);
     print_heading();
 
     let settings = make_settings(&args.config);
-    debug!("{:?}",settings);
+    debug!("{:?}", settings);
     apply_file_and_print_summary(&args, &settings);
 }
 
@@ -237,10 +237,10 @@ pub fn make_settings(file_name: &String) -> Settings {
     match settings {
         Ok(settings) => {
             settings.clone().validate_files_folder();
-            return settings;
+            settings
         }
         Err(error) => {
-            debug!("{:?}",error);
+            debug!("{:?}", error);
             bunt::println!("{$bold+red}Error:   {:?}{/$}", error);
             std::process::exit(0)
         }
@@ -248,7 +248,7 @@ pub fn make_settings(file_name: &String) -> Settings {
 }
 
 pub fn apply_file_and_print_summary(args: &Args, settings: &settings::Settings) {
-    print_postgresql_connection_info(&settings);
+    print_postgresql_connection_info(settings);
     let client = db_connection::make_connection(&settings.postgresql);
     let result = apply_file(settings, client);
     match result {
@@ -258,11 +258,17 @@ pub fn apply_file_and_print_summary(args: &Args, settings: &settings::Settings) 
             bunt::println!();
             print_plan_summary(&plan);
             if args.apply {
-                yes_apply_changes(&plan, &mut db_connection::make_connection(&settings.postgresql));
+                yes_apply_changes(
+                    &plan,
+                    &mut db_connection::make_connection(&settings.postgresql),
+                );
             } else if args.dry_run {
                 no_do_not_apply_changes();
             } else {
-                ask_do_you_want_to_apply_up(&plan, &mut db_connection::make_connection(&settings.postgresql));
+                ask_do_you_want_to_apply_up(
+                    &plan,
+                    &mut db_connection::make_connection(&settings.postgresql),
+                );
             }
         }
         Err(error) => {
@@ -272,8 +278,17 @@ pub fn apply_file_and_print_summary(args: &Args, settings: &settings::Settings) 
 }
 
 pub fn apply_file(settings: &settings::Settings, mut client: Client) -> Result<Plan, Error> {
-    let result = apply_file::apply_file(settings.clone().validate_files_folder(), &settings.postgresql.schema.as_ref().unwrap_or(&"public".to_string()).to_string(), &mut client);
-    return result;
+    let result = apply_file::apply_file(
+        settings.clone().validate_files_folder(),
+        &settings
+            .postgresql
+            .schema
+            .as_ref()
+            .unwrap_or(&"public".to_string())
+            .to_string(),
+        &mut client,
+    );
+    result
 }
 
 pub fn print_plan_details(plan: &Plan) {
@@ -305,18 +320,22 @@ pub fn print_plan_summary(plan: &Plan) {
     bunt::println!("{} table(s) changed", plan.table_statements_changes.len());
     let mut table_names_changed: Vec<String> = vec![];
     for table_statement_change in &plan.table_statements_changes {
-        match table_statement_change {
-            Statement::AlterTable { name, operation: _ } => {
-                if !table_names_changed.contains(&name.to_string()) { table_names_changed.push(name.to_string()); }
+        if let Statement::AlterTable { name, operation: _ } = table_statement_change {
+            if !table_names_changed.contains(&name.to_string()) {
+                table_names_changed.push(name.to_string());
             }
-            _ => {}
         }
     }
     bunt::println!("    {:?}", table_names_changed);
 }
 
 pub fn print_postgresql_connection_info(settings: &Settings) {
-    bunt::println!("{$italic}Conneting to {}@{}/{} {/$}", settings.postgresql.user, settings.postgresql.host, settings.postgresql.dbname);
+    bunt::println!(
+        "{$italic}Conneting to {}@{}/{} {/$}",
+        settings.postgresql.user,
+        settings.postgresql.host,
+        settings.postgresql.dbname
+    );
 }
 
 pub fn print_heading() {
@@ -347,16 +366,14 @@ fn ask_do_you_want_to_apply_up(plan: &Plan, client: &mut Client) {
     bunt::println!("{$bold}Do want to apply above changes({/$}yes or no{$bold})? {/$}");
     let mut input = String::new();
     match std::io::stdin().read_line(&mut input) {
-        Ok(_) => {
-            match input.as_str().trim() {
-                "yes" => {
-                    yes_apply_changes(plan, client);
-                }
-                _ => {
-                    no_do_not_apply_changes();
-                }
+        Ok(_) => match input.as_str().trim() {
+            "yes" => {
+                yes_apply_changes(plan, client);
             }
-        }
+            _ => {
+                no_do_not_apply_changes();
+            }
+        },
         Err(error) => println!("error: {error}"),
     }
 }
@@ -372,4 +389,3 @@ fn yes_apply_changes(plan: &Plan, client: &mut Client) {
     plan.apply_plan_up(client);
     bunt::println!("Done.");
 }
-

@@ -221,5 +221,4 @@ pub struct Args {
     ///Process changes without applying
     #[clap(short, long)]
     pub dry_run: bool,
-
 }

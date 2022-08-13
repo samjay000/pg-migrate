@@ -20,10 +20,10 @@ readme = "README.md"
 itertools = "0.10"
 snafu = "0.7"
 version = "3.0"
-sqlparser = { version = "0.18" }
+sqlparser = { version = "0.19" }
 
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 
 chrono = { version = "0.4", features = ["serde"] }
 postgres = { version = "0.19", features = ["with-chrono-0_4"] }
@@ -32,7 +32,7 @@ clap = { version = "3.1", features = ["derive"] }
 config = "0.13"
 
 bunt = "0.2"
-tabled = "0.7.0"
+tabled = "0.8.0"
 
 log = "0.4"
 fern = "0.6"
