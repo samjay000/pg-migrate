@@ -221,7 +221,7 @@ pub fn apply_file(files: Vec<String>, schema: &String, client: &mut Client) -> R
 
     debug!("files: {:?}", files);
 
-    create_schema_if_not_exist_or_public(&schema, client, &mut plan);
+    create_schema_if_not_exist_or_public(schema, client, &mut plan);
     // client.execute("SET search_path TO myschema;", &[schema]);
     let dialect = PostgreSqlDialect {}; // or AnsiDialect, or your own dialect ...
     for file in files {
@@ -274,7 +274,7 @@ pub fn apply_file(files: Vec<String>, schema: &String, client: &mut Client) -> R
     fill_table_statements_new(&mut plan, &all_statements);
     make_sql_statements(&mut plan);
     make_reverse_plan(&mut plan, &schema, client);
-    return Ok(plan);
+    Ok(plan)
 }
 
 fn create_schema_if_not_exist_or_public(schema: &String, client: &mut Client, plan: &mut Plan) {
@@ -284,13 +284,10 @@ fn create_schema_if_not_exist_or_public(schema: &String, client: &mut Client, pl
         !schema.eq_ignore_ascii_case("public")
     );
     if !schema.eq_ignore_ascii_case("public") {
-        if let is_schema_exist = client
-            .query_one(
-                "SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = $1)",
-                &[schema],
-            )
-            .unwrap()
-        {
+        if let Ok(is_schema_exist) = client.query_one(
+            "SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = $1)",
+            &[schema],
+        ) {
             let schema_status: bool = is_schema_exist.get(0);
             plan.schema_name = schema.to_string();
             plan.schema_does_not_exist = !schema_status;
@@ -301,37 +298,34 @@ fn create_schema_if_not_exist_or_public(schema: &String, client: &mut Client, pl
 
 fn fill_table_statements_new(plan: &mut Plan, ast: &Vec<Statement>) {
     for statement in ast {
-        match statement {
-            Statement::CreateTable {
-                or_replace,
-                temporary,
-                external,
-                global,
-                if_not_exists,
-                name,
-                columns,
-                constraints,
-                hive_distribution,
-                hive_formats,
-                table_properties,
-                with_options,
-                file_format,
-                location,
-                query,
-                without_rowid,
-                like,
-                engine,
-                default_charset,
-                collation,
-                on_commit,
-                clone,
-                on_cluster,
-            } => {
-                if plan.table_names_new.contains(&name.to_string()) {
-                    plan.table_statements_new.push(statement.clone());
-                }
+        if let Statement::CreateTable {
+            or_replace,
+            temporary,
+            external,
+            global,
+            if_not_exists,
+            name,
+            columns,
+            constraints,
+            hive_distribution,
+            hive_formats,
+            table_properties,
+            with_options,
+            file_format,
+            location,
+            query,
+            without_rowid,
+            like,
+            engine,
+            default_charset,
+            collation,
+            on_commit,
+            clone,
+            on_cluster,
+        } = statement {
+            if plan.table_names_new.contains(&name.to_string()) {
+                plan.table_statements_new.push(statement.clone());
             }
-            _ => {}
         }
     }
 }
@@ -358,47 +352,44 @@ fn filter_table_names_existing_for_table_names_unchanged_or_table_statements_cha
     ast: &Vec<Statement>,
 ) {
     for table_name in &plan.table_names_existing {
-        let column_defs_from_db = make_column_def_by_table_name(&schema, client, &table_name);
+        let column_defs_from_db = make_column_def_by_table_name(schema, client, table_name);
 
         for statement in ast {
-            match statement {
-                Statement::CreateTable {
-                    or_replace,
-                    temporary,
-                    external,
-                    global,
-                    if_not_exists,
-                    name,
-                    columns,
-                    constraints,
-                    hive_distribution,
-                    hive_formats,
-                    table_properties,
-                    with_options,
-                    file_format,
-                    location,
-                    query,
-                    without_rowid,
-                    like,
-                    clone,
-                    engine,
-                    default_charset,
-                    collation,
-                    on_commit,
-                    on_cluster,
-                } => {
-                    if name.to_string() == table_name.to_string() {
-                        debug!("{:?}", columns);
-                        let mut table_changes =
-                            diff_from_table_statements(name, columns.to_vec(), column_defs_from_db);
-                        if table_changes.len() == 0 {
-                            plan.table_names_unchanged.push(name.to_string());
-                        }
-                        plan.table_statements_changes.append(&mut table_changes);
-                        break;
+            if let Statement::CreateTable {
+                or_replace,
+                temporary,
+                external,
+                global,
+                if_not_exists,
+                name,
+                columns,
+                constraints,
+                hive_distribution,
+                hive_formats,
+                table_properties,
+                with_options,
+                file_format,
+                location,
+                query,
+                without_rowid,
+                like,
+                clone,
+                engine,
+                default_charset,
+                collation,
+                on_commit,
+                on_cluster,
+            } = statement {
+                if name.to_string() == *table_name.to_string() {
+                    debug!("{:?}", columns);
+                    let mut table_changes =
+                        diff_from_table_statements(name, columns.to_vec(), column_defs_from_db);
+                    if table_changes.is_empty() {
+                        plan.table_names_unchanged.push(name.to_string());
                     }
+                    plan.table_statements_changes.append(&mut table_changes);
+                    break;
                 }
-                _ => {}
             }
         }
     }
@@ -435,35 +426,32 @@ fn fetch_table_names_and_table_names_existing_or_drop(
 
 fn fetch_table_names_all_from_file(plan: &mut Plan, ast: &Vec<Statement>) {
     for statement in ast {
-        match statement {
-            Statement::CreateTable {
-                or_replace,
-                temporary,
-                external,
-                global,
-                if_not_exists,
-                name,
-                columns,
-                constraints,
-                hive_distribution,
-                hive_formats,
-                table_properties,
-                with_options,
-                file_format,
-                location,
-                query,
-                without_rowid,
-                like,
-                clone,
-                engine,
-                default_charset,
-                collation,
-                on_commit,
-                on_cluster,
-            } => {
-                plan.table_names_all_from_file.push(name.to_string());
-            }
-            _ => {}
+        if let Statement::CreateTable {
+            or_replace,
+            temporary,
+            external,
+            global,
+            if_not_exists,
+            name,
+            columns,
+            constraints,
+            hive_distribution,
+            hive_formats,
+            table_properties,
+            with_options,
+            file_format,
+            location,
+            query,
+            without_rowid,
+            like,
+            clone,
+            engine,
+            default_charset,
+            collation,
+            on_commit,
+            on_cluster,
+        } = statement {
+            plan.table_names_all_from_file.push(name.to_string());
         }
     }
 }
@@ -481,7 +469,7 @@ fn make_column_def_by_table_name(
         let column_name: &str = row_column.get("column_name"); //Name of the column
         let ordinal_position: i32 = row_column.get("ordinal_position"); //Ordinal position of the column within the table (count starts at 1)
         let column_default: Option<&str> = row_column.get("column_default"); //Default expression of the column
-        let is_nullable: bool = if row_column.get::<&str, &str>("is_nullable") == "YES" { true } else { false }; //YES if the column is possibly nullable, NO if it is known not nullable. A not-null constraint is one way a column can be known not nullable, but there can be others.
+        let is_nullable: bool = row_column.get::<&str, &str>("is_nullable") == "YES";//YES if the column is possibly nullable, NO if it is known not nullable. A not-null constraint is one way a column can be known not nullable, but there can be others.
         let data_type: &str = row_column.get("data_type"); //Data type of the column, if it is a built-in type, or ARRAY if it is some array (in that case, see the view element_types), else USER-DEFINED (in that case, the type is identified in udt_name and associated columns). If the column is based on a domain, this column refers to the type underlying the domain (and the domain is identified in domain_name and associated columns).
         let character_maximum_length: Option<i32> = row_column.get("character_maximum_length"); //If data_type identifies a character or bit string type, the declared maximum length; null for all other data types or if no maximum length was declared.
         let character_octet_length: Option<i32> = row_column.get("character_octet_length"); //If data_type identifies a character type, the maximum possible length in octets (bytes) of a datum; null for all other data types. The maximum octet length depends on the declared character maximum length (see above) and the server encoding.
@@ -610,17 +598,17 @@ fn diff_from_table_statements(
     //         }
     //     }
     // }
-    return table_statement_updated;
+    table_statement_updated
 }
 
-fn filter_column_def_in_only_a_not_in_b(a: &Vec<ColumnDef>, b: &Vec<ColumnDef>) -> Vec<ColumnDef> {
+fn filter_column_def_in_only_a_not_in_b(a: &[ColumnDef], b: &[ColumnDef]) -> Vec<ColumnDef> {
     let mut filtered: Vec<ColumnDef> = vec![];
     for column_a in a {
         if !b.contains(column_a) {
             filtered.push(column_a.clone());
         }
     }
-    return filtered;
+    filtered
 }
 
 fn make_sql_statements(plan: &mut Plan) {
@@ -642,24 +630,24 @@ fn make_sql_statements(plan: &mut Plan) {
 
 fn make_reverse_plan(plan: &mut Plan, schema: &&String, client: &mut Client) {
     for table_statement_dropped in &plan.table_statements_dropped {
-        match table_statement_dropped {
-            Statement::Drop {
-                object_type: _,
-                if_exists: _,
-                names,
-                cascade: _,
-                purge: _,
-            } => {
-                let table_name = names[0].to_string();
-                debug!("{}", table_name);
-                // let column_defs = make_column_def_by_table_name(schema,     &mut client, &&table_name);
-                // let statement = Statement::CreateTable {
-                //     or_replace: false,
-                //     temporary: false,
-                //     external: false,
-                //     global: None,
-                //     if_not_exists: false,
-                //     name: ObjectName(vec![Ident { value: table_name, quote_style: None }]),
+        if let
+        Statement::Drop {
+            object_type: _,
+            if_exists: _,
+            names,
+            cascade: _,
+            purge: _,
+        } = table_statement_dropped {
+            let table_name = names[0].to_string();
+            debug!("{}", table_name);
+            // let column_defs = make_column_def_by_table_name(schema,     &mut client, &&table_name);
+            // let statement = Statement::CreateTable {
+            //     or_replace: false,
+            //     temporary: false,
+            //     external: false,
+            //     global: None,
+            //     if_not_exists: false,
+            //     name: ObjectName(vec![Ident { value: table_name, quote_style: None }]),
                 //     columns: column_defs,
                 //     constraints: vec![],
                 //     hive_distribution: HiveDistributionStyle::NONE,
@@ -678,8 +666,6 @@ fn make_reverse_plan(plan: &mut Plan, schema: &&String, client: &mut Client) {
                 // };
                 // plan.sql_statements_for_step_down.push(statement.to_string());
             }
-            _ => {}
-        }
     }
 
     for table_statements_change in &plan.table_statements_changes {
@@ -722,32 +708,33 @@ fn make_reverse_plan(plan: &mut Plan, schema: &&String, client: &mut Client) {
     }
 
     for table_statement_new in &plan.table_statements_new {
-        match table_statement_new {
-            Statement::CreateTable {
-                or_replace,
-                temporary,
-                external,
-                global,
-                if_not_exists,
-                name,
-                columns,
-                constraints,
-                hive_distribution,
+        if let
+        Statement::CreateTable {
+            or_replace,
+            temporary,
+            external,
+            global,
+            if_not_exists,
+            name,
+            columns,
+            constraints,
+            hive_distribution,
                 hive_formats,
                 table_properties,
                 with_options,
                 file_format,
-                location,
-                query,
-                without_rowid,
-                like,
-                clone,
-                engine,
-                default_charset,
-                collation,
-                on_commit,
-                on_cluster,
-            } => plan.sql_statements_for_step_down.push(
+            location,
+            query,
+            without_rowid,
+            like,
+            clone,
+            engine,
+            default_charset,
+            collation,
+            on_commit,
+            on_cluster,
+        } = table_statement_new {
+            plan.sql_statements_for_step_down.push(
                 Statement::Drop {
                     object_type: ObjectType::Table,
                     if_exists: false,
@@ -756,8 +743,7 @@ fn make_reverse_plan(plan: &mut Plan, schema: &&String, client: &mut Client) {
                     purge: false,
                 }
                     .to_string(),
-            ),
-            _ => {}
+            )
         }
     }
 }

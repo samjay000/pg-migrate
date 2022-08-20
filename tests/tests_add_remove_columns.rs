@@ -350,7 +350,7 @@ mod tests_add_remove_columns {
     }
 
     fn correct_plan_for_schema_1_1(schema_name: String) -> Plan {
-        let mut plan = pg_sync::plan::Plan::new();
+        let mut plan = pg_sync::plan::Plan::default();
         plan.schema_name = schema_name;
         plan.schema_does_not_exist = true;
         plan.table_names_all_from_file.push("table1".to_string());
@@ -389,10 +389,12 @@ mod tests_add_remove_columns {
             query: None,
             without_rowid: false,
             like: None,
+            clone: None,
             engine: None,
             default_charset: None,
             collation: None,
             on_commit: None,
+            on_cluster: None,
         });
         plan.sql_statements_for_step_up
             .push("CREATE TABLE table1 (column11 TEXT)".to_string());
@@ -402,7 +404,7 @@ mod tests_add_remove_columns {
     }
 
     fn correct_plan_for_schema_1_2(schema_name: String) -> Plan {
-        let mut plan = pg_sync::plan::Plan::new();
+        let mut plan = pg_sync::plan::Plan::default();
         plan.schema_name = schema_name;
         plan.schema_does_not_exist = false;
         plan.table_names_all_from_file.push("table1".to_string());
@@ -435,7 +437,7 @@ mod tests_add_remove_columns {
     }
 
     fn correct_plan_for_schema_2_1(schema_name: String) -> Plan {
-        let mut plan = pg_sync::plan::Plan::new();
+        let mut plan = pg_sync::plan::Plan::default();
         plan.schema_name = schema_name;
         plan.schema_does_not_exist = true;
         plan.table_names_all_from_file.push("table1".to_string());
@@ -475,10 +477,12 @@ mod tests_add_remove_columns {
             query: None,
             without_rowid: false,
             like: None,
+            clone: None,
             engine: None,
             default_charset: None,
             collation: None,
             on_commit: None,
+            on_cluster: None,
         });
         // plan.table_names_existing.push("table1".to_string());
         // plan.table_statements_changes.push(
@@ -492,7 +496,7 @@ mod tests_add_remove_columns {
     }
 
     fn correct_plan_for_schema_2_2(schema_name: String) -> Plan {
-        let mut plan = pg_sync::plan::Plan::new();
+        let mut plan = pg_sync::plan::Plan::default();
         plan.schema_name = schema_name;
         plan.schema_does_not_exist = false;
         plan.table_names_all_from_file.push("table1".to_string());
@@ -554,10 +558,12 @@ mod tests_add_remove_columns {
             query: None,
             without_rowid: false,
             like: None,
+            clone: None,
             engine: None,
             default_charset: None,
             collation: None,
             on_commit: None,
+            on_cluster: None,
         });
         plan.table_names_existing.push("table1".to_string());
         plan.table_statements_changes.push(Statement::AlterTable {
@@ -589,7 +595,7 @@ mod tests_add_remove_columns {
     }
 
     fn correct_plan_for_schema_2_3(schema_name: String) -> Plan {
-        let mut plan = pg_sync::plan::Plan::new();
+        let mut plan = pg_sync::plan::Plan::default();
         plan.schema_name = schema_name;
         plan.schema_does_not_exist = false;
         plan.table_names_all_from_file.push("table1".to_string());
