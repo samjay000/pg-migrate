@@ -1,14 +1,13 @@
 CREATE TABLE table1
 (
-    column11 integer PRIMARY KEY,
+    column11 integer,
     column12 text
 );
 
 CREATE TABLE table2
 (
     column21 bigint,
-    column22 bigint,
-    PRIMARY KEY (column21, column22)
+    column22 bigint
 );
 --
 -- CREATE TABLE table3

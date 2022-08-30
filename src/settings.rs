@@ -294,35 +294,28 @@ impl Settings {
 
     pub fn validate_files_folder(mut self) -> Vec<String> {
         let mut file_list: Vec<String> = vec![];
-        let mut file_not_found = true;
-        let mut file_not_found_in_files = true;
-        let mut folder_not_found = true;
         if let Some(files) = self.files {
             if let Some(file_name) = files.file {
                 // let file_name_str = format!("{}", file_name);
                 let path = Path::new(&file_name);
                 if !path.exists() {
-                    file_not_found = true;
                     bunt::println!("{$bold+red}File {} does not exist.{/$}", file_name);
                     std::process::exit(0)
                 } else if !path.is_file() {
-                    file_not_found = true;
                     bunt::println!("{$bold+red}Path {} is not a file.{/$}", file_name);
                     std::process::exit(0)
                 } else {
                     file_list.push(file_name);
                 }
             }
-            if file_not_found {
+            if file_list.is_empty() {
                 if let Some(file_names) = files.files {
                     for file_name in file_names {
                         let path = Path::new(&file_name);
                         if !path.exists() {
-                            file_not_found_in_files = true;
                             bunt::println!("{$bold+red}File {} does not exist.{/$}", file_name);
                             std::process::exit(0)
                         } else if !path.is_file() {
-                            file_not_found_in_files = true;
                             bunt::println!("{$bold+red}Path {} is not a file.{/$}", file_name);
                             std::process::exit(0)
                         } else {
@@ -331,13 +324,12 @@ impl Settings {
                     }
                 }
             }
-            if file_not_found && file_not_found_in_files {
+            if file_list.is_empty() {
                 // std::todo!();
                 //     TODO
-                folder_not_found = false;
             }
         }
-        if file_not_found && file_not_found_in_files && folder_not_found {
+        if file_list.is_empty() {
             self.files = Some(Files {
                 file: Some("schema.sql".to_string()),
                 files: None,
