@@ -5,3 +5,4 @@ members = [
     "cli",
     "pg_migrate_lib"
 ]
+resolver = "2"

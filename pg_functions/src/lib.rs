@@ -14,6 +14,9 @@ mod tests {
 
     #[test]
     fn it_works() {
+        let get_version_sql = Asset::get("get_version.sql").unwrap();
+        let local_variable = std::str::from_utf8(get_version_sql.data.as_ref()).unwrap();
+        println!("get_version_sql: {local_variable}");
         let result = add(2, 2);
         assert_eq!(result, 4);
     }
