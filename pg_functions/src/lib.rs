@@ -4,6 +4,18 @@ use rust_embed::RustEmbed;
 #[folder = "sql"]
 struct Asset;
 
+pub fn get_version_sql(version: &str) -> String {
+    let embedded_file = Asset::get("get_version.sql").unwrap();
+    let local_variable = String::from(std::str::from_utf8(embedded_file.data.as_ref()).unwrap());
+    return local_variable.replace("{version}", version);
+}
+//
+// pub fn get_table_definition_sql(version: &str) -> &str {
+//     let embedded_file = Asset::get("get_table_definition.sql").unwrap();
+//     let local_variable = std::str::from_utf8(embedded_file.data.as_ref()).unwrap();
+//     return local_variable;
+// }
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
@@ -13,11 +25,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let get_version_sql = Asset::get("get_version.sql").unwrap();
-        let local_variable = std::str::from_utf8(get_version_sql.data.as_ref()).unwrap();
-        println!("get_version_sql: {local_variable}");
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn test_get_version_sql() {
+        let version = "v0.0.1";
+        let result = get_version_sql(version);
+        assert_eq!(result, "CREATE OR REPLACE FUNCTION public.get_pg_migrate_version(
+)
+    RETURNS SETOF TEXT
+AS
+$BODY$
+BEGIN
+    RETURN query
+        SELECT '{version}';
+END;
+$BODY$
+    LANGUAGE plpgsql;
+
+
+select get_pg_migrate_version();".replace("{version}", version));
     }
 }

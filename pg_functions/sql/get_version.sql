@@ -5,7 +5,7 @@ AS
 $BODY$
 BEGIN
     RETURN query
-        SELECT 'v0.1.0';
+        SELECT '{version}';
 END;
 $BODY$
     LANGUAGE plpgsql;
