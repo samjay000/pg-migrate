@@ -16,10 +16,6 @@ pub fn get_table_definition_sql() -> String {
     return local_variable;
 }
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

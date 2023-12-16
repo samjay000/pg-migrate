@@ -1,7 +1,6 @@
 [workspace]
 
 members = [
-    "pg_functions",
     "cli",
     "pg_migrate_lib"
 ]

@@ -6,12 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-shadow-rs = "0.23"
+shadow-rs = "0.24.0"
 os_info = "3.7"
 clap = { version = "4.4", features = ["derive"] }
 config = "0.13"
 
-pg_functions = { path = "../pg_functions" }
-
 [build-dependencies]
-shadow-rs = "0.23"
+shadow-rs = "0.24.0"

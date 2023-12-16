@@ -60,7 +60,7 @@ pub fn main() {
     // println!("{}", build::BUILD_TIME);//2020-08-16 14:50:25
     // println!("{}", build::BUILD_RUST_CHANNEL);//debug
     // println!("{}", build::GIT_CLEAN);//false
-    // println!("{}", build::GIT_STATUS_FILE);//* src/lib.rs (dirty)
+    // println!("{}", build::GIT_STATUS_FILE);//* src/pg_functions (dirty)
 }
 
 #[cfg(test)]
