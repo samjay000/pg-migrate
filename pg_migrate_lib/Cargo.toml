@@ -7,5 +7,9 @@ edition = "2021"
 
 [dependencies]
 postgres = { version = "0.19", features = ["with-chrono-0_4"] }
+shadow-rs = "0.24.0"
+os_info = "3.7"
+config = "0.13"
 
 [build-dependencies]
+shadow-rs = "0.24.0"

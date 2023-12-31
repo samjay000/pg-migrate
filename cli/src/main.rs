@@ -1,8 +1,4 @@
 use clap::{Parser, Subcommand};
-use shadow_rs::shadow;
-
-shadow!(build);
-
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -19,8 +15,7 @@ struct Args {
     command: Option<Commands>,
 }
 
-#[derive(Debug)]
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum Commands {
     /// does testing things
     Test {
@@ -39,7 +34,7 @@ pub fn main() {
     // println!("git_clean:{}", shadow_rs::git_clean()); // get current project clean. e.g 'true/false'
     // println!("git_status_file:{}", shadow_rs::git_status_file()); // get current project statue file. e.g '  * examples/builtin_fn.rs (dirty)'
 
-    println!("{}", build::VERSION); //print version const
+    // println!("{}", build::VERSION); //print version const
     // println!("{}", build::CLAP_LONG_VERSION); //print CLAP_LONG_VERSION const
     // println!("{}", build::BRANCH); //master
     // println!("{}", build::SHORT_COMMIT);//8405e28e
@@ -52,7 +47,7 @@ pub fn main() {
     // println!("{}", build::RUST_VERSION);//rustc 1.45.0 (5c1f21c3b 2020-07-13)
     // println!("{}", build::RUST_CHANNEL);//stable-x86_64-apple-darwin (default)
     // println!("{}", build::CARGO_VERSION);//cargo 1.45.0 (744bd1fbb 2020-06-15)
-    println!("{}", build::PKG_VERSION);//0.3.13
+    // println!("{}", build::PKG_VERSION); //0.3.13
     // println!("{}", build::CARGO_TRs  EE); //like command:cargo tree
     // println!("{}", build::CARGO_MANIFEST_DIR); // /User/baoyachi/shadow-rs/ |
     //

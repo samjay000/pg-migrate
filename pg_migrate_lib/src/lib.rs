@@ -1,19 +1,26 @@
 use postgres::{Client, NoTls};
+use shadow_rs::shadow;
 
-pub fn connect(user: String, password: String, host: String, port: String, database: String) -> Client {
+mod tests;
+
+shadow!(build);
+
+pub fn connect(
+    user: String,
+    password: String,
+    host: String,
+    port: String,
+    database: String,
+) -> Client {
     Client::connect(
         format!(
             "postgresql://{}:{}@{}:{}/{}",
-            user,
-            password,
-            host,
-            port,
-            database
+            user, password, host, port, database
         )
-            .as_str(),
+        .as_str(),
         NoTls,
     )
-        .unwrap()
+    .unwrap()
 }
 
 pub fn is_function_exists(mut client: Client, function_name: &str) -> bool {
@@ -27,26 +34,8 @@ pub fn is_function_exists(mut client: Client, function_name: &str) -> bool {
     return result;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub fn create_function_if_not_exist(mut client: Client, function_name: &str) -> bool {
+    let result = is_function_exists(client, function_name);
 
-    #[test]
-    fn test_connect() {
-        connect("samjay".to_string(), "".to_string(), "localhost".to_string(), "5432".to_string(), "postgres".to_string());
-    }
-
-    #[test]
-    fn test_is_function_exists1() {
-        let con = connect("samjay".to_string(), "".to_string(), "localhost".to_string(), "5432".to_string(), "postgres".to_string());
-        let res = is_function_exists(con, "get_pg_migrate_version");
-        println!("is_function_exists1: {}", res)
-    }
-
-    #[test]
-    fn test_is_function_exists2() {
-        let con = connect("samjay".to_string(), "".to_string(), "localhost".to_string(), "5432".to_string(), "postgres".to_string());
-        let res = is_function_exists(con, "get_table_def");
-        println!("is_function_exists2: {}", res)
-    }
+    return result;
 }
